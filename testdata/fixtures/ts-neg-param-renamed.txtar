@@ -1,0 +1,25 @@
+Negative: a only renames parameters.
+-- base/src/auth.ts --
+export function login(name: string, email: string): string {
+  return name + email;
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export function login(user: string, mail: string): string {
+  return user + mail;
+}
+-- b/src/users.ts --
+import { login } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function createUser(): string {
+  return login("ann", "ann@example.com");
+}
+-- expected.json --
+{"result": "clean", "findings": []}

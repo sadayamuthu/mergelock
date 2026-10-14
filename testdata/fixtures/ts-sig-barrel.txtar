@@ -1,0 +1,27 @@
+b imports login through an index.ts barrel.
+-- base/src/auth/service.ts --
+export function login(name: string, email: string): string {
+  return name + email;
+}
+-- base/src/auth/index.ts --
+export * from "./service";
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth/service.ts --
+export function login(name: string, email: string, tenant: string): string {
+  return tenant + name + email;
+}
+-- b/src/users.ts --
+import { login } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function createUser(): string {
+  return login("ann", "ann@example.com");
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "login", "min_confidence": "high"}]}

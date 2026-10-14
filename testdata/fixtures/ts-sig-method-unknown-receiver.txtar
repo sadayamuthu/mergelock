@@ -1,0 +1,33 @@
+b calls login on an untyped receiver in a file that imports the auth module: medium confidence.
+-- base/src/auth.ts --
+export class AuthService {
+  login(name: string, email: string): string {
+    return name + email;
+  }
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export class AuthService {
+  login(name: string): string {
+    return name;
+  }
+}
+-- b/src/users.ts --
+import { AuthService } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function makeService(): AuthService {
+  return new AuthService();
+}
+
+export function createUser(svc: any): string {
+  return svc.login("ann", "ann@example.com");
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "AuthService.login", "min_confidence": "medium", "max_confidence": "medium"}]}

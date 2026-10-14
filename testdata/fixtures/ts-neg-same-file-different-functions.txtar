@@ -1,0 +1,39 @@
+Negative: both branches edit different functions in the same file, far apart.
+-- base/src/math.ts --
+export function add(a: number, b: number): number {
+  return a + b;
+}
+
+export function sub(a: number, b: number): number {
+  return a - b;
+}
+
+export function mul(a: number, b: number): number {
+  return a * b;
+}
+-- a/src/math.ts --
+export function add(a: number, b: number): number {
+  return b + a;
+}
+
+export function sub(a: number, b: number): number {
+  return a - b;
+}
+
+export function mul(a: number, b: number): number {
+  return a * b;
+}
+-- b/src/math.ts --
+export function add(a: number, b: number): number {
+  return a + b;
+}
+
+export function sub(a: number, b: number): number {
+  return a - b;
+}
+
+export function mul(a: number, b: number): number {
+  return b * a;
+}
+-- expected.json --
+{"result": "clean", "findings": []}

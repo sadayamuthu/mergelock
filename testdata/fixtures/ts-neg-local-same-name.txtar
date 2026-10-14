@@ -1,0 +1,27 @@
+Negative: b calls its own local function that happens to be named login.
+-- base/src/auth.ts --
+export function login(name: string, email: string): string {
+  return name + email;
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export function login(name: string): string {
+  return name;
+}
+-- b/src/users.ts --
+function login(user: string, pass: string): string {
+  return user + pass;
+}
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function createUser(): string {
+  return login("ann", "secret");
+}
+-- expected.json --
+{"result": "clean", "findings": []}

@@ -1,0 +1,27 @@
+Same as ts-sig-direct-import, but b's file has a syntax error: confidence drops from high to medium.
+-- base/src/auth.ts --
+export function login(name: string, email: string): string {
+  return name + email;
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export function login(name: string): string {
+  return name;
+}
+-- b/src/users.ts --
+import { login } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function createUser(): string {
+  return login("ann", "ann@example.com");
+}
+
+export const broken = ;
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "login", "min_confidence": "medium", "max_confidence": "medium"}]}

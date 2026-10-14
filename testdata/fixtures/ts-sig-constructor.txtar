@@ -1,0 +1,33 @@
+a adds a required constructor parameter; b constructs the class with the old arguments.
+-- base/src/auth.ts --
+export class AuthService {
+  constructor(db: string) {}
+
+  login(name: string): string {
+    return name;
+  }
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export class AuthService {
+  constructor(db: string, timeoutMs: number) {}
+
+  login(name: string): string {
+    return name;
+  }
+}
+-- b/src/users.ts --
+import { AuthService } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function makeService(): AuthService {
+  return new AuthService("postgres://db");
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "AuthService.constructor", "min_confidence": "high"}]}

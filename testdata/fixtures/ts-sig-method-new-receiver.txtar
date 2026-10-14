@@ -1,0 +1,35 @@
+a changes a method signature; b calls it on a locally constructed instance.
+-- base/src/auth.ts --
+export class AuthService {
+  login(name: string, email: string): string {
+    return name + email;
+  }
+}
+-- base/src/users.ts --
+export function listUsers(): string[] {
+  return [];
+}
+-- a/src/auth.ts --
+export interface LoginOptions {
+  name: string;
+  email: string;
+}
+
+export class AuthService {
+  login(opts: LoginOptions): string {
+    return opts.name + opts.email;
+  }
+}
+-- b/src/users.ts --
+import { AuthService } from "./auth";
+
+export function listUsers(): string[] {
+  return [];
+}
+
+export function createUser(): string {
+  const svc = new AuthService();
+  return svc.login("ann", "ann@example.com");
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "AuthService.login", "min_confidence": "high"}]}

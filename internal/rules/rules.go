@@ -11,7 +11,7 @@ import (
 
 // All returns every v0.1 rule.
 func All() []engine.Rule {
-	return []engine.Rule{Textual{}, AddAdd{}, ModifyDelete{}}
+	return []engine.Rule{Textual{}, AddAdd{}, ModifyDelete{}, SignatureCaller{}}
 }
 
 func sortedKeys[V any](m map[string]V) []string {
