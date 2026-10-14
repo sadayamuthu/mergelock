@@ -1,6 +1,9 @@
 package engine
 
 import (
+	pathpkg "path"
+	"strings"
+
 	"github.com/sadayamuthu/mergelock/internal/cache"
 	"github.com/sadayamuthu/mergelock/internal/gitx"
 	"github.com/sadayamuthu/mergelock/internal/lang"
@@ -79,7 +82,7 @@ func (l *Loader) load(commit, path string) (*model.FileFacts, error) {
 		l.Unsupported[path] = true
 		return nil, nil
 	}
-	if f, ok := l.cache.Get(ad.Name(), ad.Version(), oid); ok {
+	if f, ok := l.cache.Get(ad.Name(), cacheVersion(ad, path), oid); ok {
 		f.Rebase(path)
 		l.note(ad, f)
 		return f, nil
@@ -97,10 +100,16 @@ func (l *Loader) load(commit, path string) (*model.FileFacts, error) {
 	}
 	f, parsed := parseSafely(ad, path, data)
 	if parsed {
-		_ = l.cache.Put(ad.Name(), ad.Version(), oid, f) // cache failures are never fatal
+		_ = l.cache.Put(ad.Name(), cacheVersion(ad, path), oid, f) // cache failures are never fatal
 	}
 	l.note(ad, f)
 	return f, nil
+}
+
+// cacheVersion keys cache entries by adapter version and file extension: one
+// adapter may parse extensions with different grammars (TS, TSX, JS).
+func cacheVersion(ad lang.Adapter, p string) string {
+	return ad.Version() + "+" + strings.TrimPrefix(pathpkg.Ext(p), ".")
 }
 
 // parseSafely never fails: a parser error or panic yields empty, partial

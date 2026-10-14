@@ -1,7 +1,6 @@
 package engine
 
 import (
-	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -135,7 +134,7 @@ func TestLoaderCacheAndRebase(t *testing.T) {
 	if err != nil || fa == nil {
 		t.Fatal(err)
 	}
-	entries, _ := filepath.Glob(filepath.Join(repo.CommonDir, "mergelock", "cache", "v1", "typescript@1", "*", "*.gob"))
+	entries, _ := filepath.Glob(filepath.Join(repo.CommonDir, "mergelock", "cache", "v1", "typescript@1+ts", "*", "*.gob"))
 	if len(entries) != 1 {
 		t.Fatalf("expected 1 cache entry, got %v", entries)
 	}
@@ -149,6 +148,24 @@ func TestLoaderCacheAndRebase(t *testing.T) {
 	}
 	if missing, err := l.FactsAt(head, "nope.ts"); missing != nil || err != nil {
 		t.Fatalf("missing path = %+v, %v", missing, err)
+	}
+}
+
+// The same blob under .ts and .js is parsed by different grammars, so it
+// must not share a cache entry.
+func TestLoaderCacheKeyIncludesGrammar(t *testing.T) {
+	r := gittest.New(t)
+	typed := "export function f(a: string): number { return 1; }\n" // a syntax error for the JS grammar
+	r.Write("a.ts", typed)
+	r.Write("b.js", typed)
+	head := r.Commit("base")
+	l, _ := newLoader(t, r.Dir, false)
+	if f, err := l.FactsAt(head, "a.ts"); err != nil || f == nil || f.Partial {
+		t.Fatalf("a.ts = %+v, %v; want a clean TS parse", f, err)
+	}
+	f, err := l.FactsAt(head, "b.js")
+	if err != nil || f == nil || !f.Partial {
+		t.Fatalf("b.js = %+v, %v; want the JS grammar's partial parse, not a.ts's cached facts", f, err)
 	}
 }
 
@@ -197,7 +214,7 @@ func TestLoaderAdapterPanicIsPartialAndUncached(t *testing.T) {
 	if !l.Partial["x.boom"] || !l.Languages["boom"] {
 		t.Errorf("coverage maps: partial=%v languages=%v", l.Partial, l.Languages)
 	}
-	if _, err := os.Stat(filepath.Join(repo.CommonDir, "mergelock", "cache", "v1", "boom@1")); !os.IsNotExist(err) {
-		t.Errorf("recovered result must not be cached (stat err = %v)", err)
+	if entries, _ := filepath.Glob(filepath.Join(repo.CommonDir, "mergelock", "cache", "v1", "boom@*")); len(entries) != 0 {
+		t.Errorf("recovered result must not be cached, found %v", entries)
 	}
 }
