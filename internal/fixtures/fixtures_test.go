@@ -196,9 +196,13 @@ func TestVerdictsAreDeterministic(t *testing.T) {
 				b, _ := json.Marshal(v)
 				return string(b)
 			}
-			first, second := render(false), render(true)
+			// cold cache (fills it), no cache, then warm cache (served from it)
+			first, second, third := render(false), render(true), render(false)
 			if first != second {
-				t.Errorf("verdicts differ:\n%s\n%s", first, second)
+				t.Errorf("cold and no-cache verdicts differ:\n%s\n%s", first, second)
+			}
+			if first != third {
+				t.Errorf("cold and warm-cache verdicts differ:\n%s\n%s", first, third)
 			}
 		})
 	}
