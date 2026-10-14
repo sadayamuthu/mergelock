@@ -1,0 +1,27 @@
+a deletes format_date; b adds a caller.
+-- base/app/__init__.py --
+-- base/app/utils.py --
+def format_date(d):
+    return d.isoformat()
+
+
+def pad(n):
+    return str(n).zfill(2)
+-- base/app/report.py --
+def title():
+    return "Report"
+-- a/app/utils.py --
+def pad(n):
+    return str(n).zfill(2)
+-- b/app/report.py --
+from app.utils import format_date
+
+
+def title():
+    return "Report"
+
+
+def stamp(d):
+    return format_date(d)
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "modify_delete", "kind": "deleted_symbol_referenced", "symbol": "format_date", "min_confidence": "medium"}]}

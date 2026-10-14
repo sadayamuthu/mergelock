@@ -1,0 +1,25 @@
+b imports login from a package that re-exports it in __init__.py.
+-- base/app/__init__.py --
+-- base/app/auth/__init__.py --
+from .service import login
+-- base/app/auth/service.py --
+def login(name, email):
+    return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth/service.py --
+def login(name, email, tenant):
+    return tenant + name + email
+-- b/app/users.py --
+from app.auth import login
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    return login("ann", "ann@example.com")
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "login", "min_confidence": "medium"}]}

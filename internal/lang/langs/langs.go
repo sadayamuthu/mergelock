@@ -3,10 +3,11 @@ package langs
 
 import (
 	"github.com/sadayamuthu/mergelock/internal/lang"
+	"github.com/sadayamuthu/mergelock/internal/lang/python"
 	"github.com/sadayamuthu/mergelock/internal/lang/typescript"
 )
 
 // Default returns the registry used by the CLI and MCP server.
 func Default() *lang.Registry {
-	return lang.NewRegistry(typescript.New())
+	return lang.NewRegistry(typescript.New(), python.New())
 }

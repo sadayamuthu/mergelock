@@ -1,0 +1,26 @@
+a adds a required __init__ parameter; b constructs with the old arguments.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+class AuthService:
+    def __init__(self, db):
+        self.db = db
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+class AuthService:
+    def __init__(self, db, cfg):
+        self.db = db
+        self.cfg = cfg
+-- b/app/users.py --
+from app.auth import AuthService
+
+
+def list_users():
+    return []
+
+
+def make_service():
+    return AuthService("db")
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "AuthService.__init__", "min_confidence": "medium"}]}

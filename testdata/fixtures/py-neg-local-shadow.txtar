@@ -1,0 +1,24 @@
+Negative: b calls its own local login, not app.auth.login.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+def login(name, email):
+    return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+def login(name):
+    return name
+-- b/app/users.py --
+def login(user, password):
+    return user + password
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    return login("ann", "secret")
+-- expected.json --
+{"result": "clean", "findings": []}

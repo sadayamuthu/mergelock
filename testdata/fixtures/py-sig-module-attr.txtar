@@ -1,0 +1,23 @@
+b calls through a dotted module import.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+def login(name, email):
+    return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+def login(name):
+    return name
+-- b/app/users.py --
+import app.auth
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    return app.auth.login("ann", "ann@example.com")
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "login", "min_confidence": "medium"}]}

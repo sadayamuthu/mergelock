@@ -1,0 +1,15 @@
+Negative: b calls .login on an unknown object in a module that never imports auth.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+class AuthService:
+    def login(self, name, email):
+        return name + email
+-- a/app/auth.py --
+class AuthService:
+    def login(self, name):
+        return name
+-- b/app/notify.py --
+def notify(client):
+    return client.login("ann", "ann@example.com")
+-- expected.json --
+{"result": "clean", "findings": []}

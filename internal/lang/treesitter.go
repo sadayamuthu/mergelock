@@ -4,6 +4,8 @@ import (
 	"strings"
 
 	sitter "github.com/tree-sitter/go-tree-sitter"
+
+	"github.com/sadayamuthu/mergelock/internal/model"
 )
 
 // Text returns n's source text, or "" for a nil node.
@@ -56,4 +58,23 @@ func Snippet(n *sitter.Node, src []byte) string {
 		s = s[:117] + "..."
 	}
 	return s
+}
+
+// BodyHash hashes n's raw tokens, so comments and whitespace do not count.
+// It returns "" for a nil node.
+func BodyHash(n *sitter.Node, src []byte) string {
+	if n == nil {
+		return ""
+	}
+	return model.HashStrings(Tokens(n, src, nil, nil, false)...)
+}
+
+// BodyShingles returns the shingles of n's normalized tokens, or nil when the
+// body is too short (fewer than model.MinShingleTokens tokens) to compare.
+func BodyShingles(n *sitter.Node, src []byte, idents, literals map[string]bool) []uint64 {
+	norm := Tokens(n, src, idents, literals, true)
+	if len(norm) < model.MinShingleTokens {
+		return nil
+	}
+	return model.Shingles(norm, model.ShingleSize)
 }

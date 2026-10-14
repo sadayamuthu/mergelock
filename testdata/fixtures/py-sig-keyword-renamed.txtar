@@ -1,0 +1,23 @@
+a renames a keyword parameter; b passes the old keyword.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+def login(name, email=""):
+    return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+def login(name, mail=""):
+    return name + mail
+-- b/app/users.py --
+from app.auth import login
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    return login("ann", email="ann@example.com")
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "login", "min_confidence": "medium"}]}

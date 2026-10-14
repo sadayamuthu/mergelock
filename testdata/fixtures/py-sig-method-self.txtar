@@ -1,0 +1,32 @@
+a changes a method; b calls it on an instance it constructs.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+class AuthService:
+    def __init__(self, db):
+        self.db = db
+
+    def login(self, name, email):
+        return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+class AuthService:
+    def __init__(self, db):
+        self.db = db
+
+    def login(self, opts):
+        return opts["name"] + opts["email"]
+-- b/app/users.py --
+from app.auth import AuthService
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    svc = AuthService("db")
+    return svc.login("ann", "ann@example.com")
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "signature_caller", "symbol": "AuthService.login", "min_confidence": "medium"}]}

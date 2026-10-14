@@ -1,6 +1,7 @@
 package lang_test
 
 import (
+	"slices"
 	"strings"
 	"testing"
 
@@ -58,5 +59,38 @@ func TestTokens(t *testing.T) {
 	}
 	if got := lang.Snippet(fn, src); strings.Contains(got, "\n") || !strings.HasPrefix(got, "function f(a)") {
 		t.Errorf("Snippet = %q", got)
+	}
+}
+
+func TestBodyHashAndShingles(t *testing.T) {
+	parse := func(src string) (*sitter.Node, []byte, func()) {
+		p := sitter.NewParser()
+		p.SetLanguage(sitter.NewLanguage(tsjs.Language()))
+		tree := p.Parse([]byte(src), nil)
+		body := tree.RootNode().NamedChild(0).ChildByFieldName("body")
+		return body, []byte(src), func() { tree.Close(); p.Close() }
+	}
+	ids, lits := map[string]bool{"identifier": true}, map[string]bool{"number": true}
+
+	a, srcA, closeA := parse("function f(a) { return a + 1; }")
+	defer closeA()
+	b, srcB, closeB := parse("function f(a) { // note\n  return a + 1; }")
+	defer closeB()
+	if lang.BodyHash(nil, srcA) != "" || lang.BodyHash(a, srcA) == "" {
+		t.Error("BodyHash nil/non-nil")
+	}
+	if lang.BodyHash(a, srcA) != lang.BodyHash(b, srcB) {
+		t.Error("BodyHash must ignore comments and whitespace")
+	}
+	if lang.BodyShingles(a, srcA, ids, lits) != nil || lang.BodyShingles(nil, srcA, ids, lits) != nil {
+		t.Error("short or nil bodies must have no shingles")
+	}
+	long := "function f(a) { const b = a + 1; const c = b * 2; const d = c - 3; return a + b + c + d; }"
+	l, srcL, closeL := parse(long)
+	defer closeL()
+	norm := lang.Tokens(l, srcL, ids, lits, true)
+	want := model.Shingles(norm, model.ShingleSize)
+	if got := lang.BodyShingles(l, srcL, ids, lits); len(norm) < model.MinShingleTokens || !slices.Equal(got, want) {
+		t.Errorf("BodyShingles = %v, want %v (tokens %d)", got, want, len(norm))
 	}
 }

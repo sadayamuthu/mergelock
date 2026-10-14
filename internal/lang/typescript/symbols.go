@@ -119,7 +119,7 @@ func (x *extractor) declaration(n *sitter.Node, exported, isDefault bool) {
 	case "class_declaration", "abstract_class_declaration":
 		name := x.text(n.ChildByFieldName("name"))
 		body := n.ChildByFieldName("body")
-		x.add(model.Symbol{Name: name, Kind: model.KindClass, Exported: exported, BodyHash: x.bodyHash(body), Line: lang.Line(n)})
+		x.add(model.Symbol{Name: name, Kind: model.KindClass, Exported: exported, BodyHash: lang.BodyHash(body, x.src), Line: lang.Line(n)})
 		if isDefault {
 			x.facts.Default = name
 		}
@@ -139,10 +139,10 @@ func (x *extractor) declaration(n *sitter.Node, exported, isDefault bool) {
 		}
 	case "interface_declaration":
 		x.add(model.Symbol{Name: x.text(n.ChildByFieldName("name")), Kind: model.KindInterface, Exported: exported,
-			BodyHash: x.bodyHash(n.ChildByFieldName("body")), Line: lang.Line(n)})
+			BodyHash: lang.BodyHash(n.ChildByFieldName("body"), x.src), Line: lang.Line(n)})
 	case "type_alias_declaration":
 		x.add(model.Symbol{Name: x.text(n.ChildByFieldName("name")), Kind: model.KindTypeAlias, Exported: exported,
-			BodyHash: x.bodyHash(n.ChildByFieldName("value")), Line: lang.Line(n)})
+			BodyHash: lang.BodyHash(n.ChildByFieldName("value"), x.src), Line: lang.Line(n)})
 	case "lexical_declaration", "variable_declaration":
 		for i := uint(0); i < n.NamedChildCount(); i++ {
 			d := n.NamedChild(i)
@@ -156,13 +156,6 @@ func (x *extractor) declaration(n *sitter.Node, exported, isDefault bool) {
 			x.addCallable(x.text(nameNode), model.KindFunction, val, d, exported)
 		}
 	}
-}
-
-func (x *extractor) bodyHash(n *sitter.Node) string {
-	if n == nil {
-		return ""
-	}
-	return model.HashStrings(lang.Tokens(n, x.src, nil, nil, false)...)
 }
 
 // addCallable records a function or method. fn holds parameters/body; at is
@@ -192,11 +185,9 @@ func (x *extractor) addCallable(name string, kind model.Kind, fn, at *sitter.Nod
 		Name: name, Kind: kind, Exported: exported,
 		Signature: model.Signature{Text: short + paramText + ret, Params: params},
 		SigHash:   model.HashStrings(parts...),
-		BodyHash:  x.bodyHash(body),
+		BodyHash:  lang.BodyHash(body, x.src),
+		Shingles:  lang.BodyShingles(body, x.src, identKinds, literalKinds),
 		Line:      lang.Line(at),
-	}
-	if norm := lang.Tokens(body, x.src, identKinds, literalKinds, true); len(norm) >= model.MinShingleTokens {
-		s.Shingles = model.Shingles(norm, model.ShingleSize)
 	}
 	x.add(s)
 }

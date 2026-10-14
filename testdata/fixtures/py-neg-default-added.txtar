@@ -1,0 +1,23 @@
+Negative: a adds a parameter with a default; b's old-arity call still works.
+-- base/app/__init__.py --
+-- base/app/auth.py --
+def login(name, email):
+    return name + email
+-- base/app/users.py --
+def list_users():
+    return []
+-- a/app/auth.py --
+def login(name, email, remember=False):
+    return name + email
+-- b/app/users.py --
+from app.auth import login
+
+
+def list_users():
+    return []
+
+
+def create_user():
+    return login("ann", "ann@example.com")
+-- expected.json --
+{"result": "clean", "findings": []}
