@@ -228,3 +228,36 @@ func Score(f *Fixture, v *verdict.Verdict) []string {
 	}
 	return fails
 }
+
+// ClassScore counts true positives, false positives and false negatives.
+type ClassScore struct{ TP, FP, FN int }
+
+// Tally scores one verdict per class, using the same matching as Score.
+func Tally(f *Fixture, v *verdict.Verdict) map[string]ClassScore {
+	out := map[string]ClassScore{}
+	used := make([]bool, len(v.Findings))
+	for _, e := range f.Expected.Findings {
+		s := out[e.Class]
+		matched := false
+		for i, got := range v.Findings {
+			if !used[i] && e.matches(got) {
+				used[i], matched = true, true
+				break
+			}
+		}
+		if matched {
+			s.TP++
+		} else {
+			s.FN++
+		}
+		out[e.Class] = s
+	}
+	for i, got := range v.Findings {
+		if !used[i] {
+			s := out[got.Class]
+			s.FP++
+			out[got.Class] = s
+		}
+	}
+	return out
+}

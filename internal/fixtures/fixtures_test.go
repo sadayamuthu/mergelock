@@ -3,6 +3,10 @@ package fixtures
 import (
 	"context"
 	"encoding/json"
+	"fmt"
+	"sort"
+	"strings"
+	"sync"
 	"testing"
 
 	"github.com/sadayamuthu/mergelock/internal/config"
@@ -78,7 +82,99 @@ func runFixture(t *testing.T, f *Fixture) *verdict.Verdict {
 	return v
 }
 
+func TestTally(t *testing.T) {
+	f := &Fixture{Expected: Expected{Result: verdict.Conflict, Findings: []ExpectedFinding{
+		{Class: "signature_caller"}, {Class: "modify_delete"},
+	}}}
+	v := &verdict.Verdict{Findings: []verdict.Finding{{Class: "signature_caller"}, {Class: "textual"}}}
+	got := Tally(f, v)
+	if got["signature_caller"] != (ClassScore{TP: 1}) || got["textual"] != (ClassScore{FP: 1}) || got["modify_delete"] != (ClassScore{FN: 1}) {
+		t.Errorf("Tally = %+v", got)
+	}
+}
+
 func TestFixtures(t *testing.T) {
+	all, err := LoadDir(fixtureDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mu sync.Mutex
+	totals := map[string]ClassScore{}
+	t.Cleanup(func() {
+		classes := make([]string, 0, len(totals))
+		for c := range totals {
+			classes = append(classes, c)
+		}
+		sort.Strings(classes)
+		var b strings.Builder
+		b.WriteString("\nclass                  TP  FP  FN  precision  recall\n")
+		for _, c := range classes {
+			s := totals[c]
+			p, r := 1.0, 1.0
+			if s.TP+s.FP > 0 {
+				p = float64(s.TP) / float64(s.TP+s.FP)
+			}
+			if s.TP+s.FN > 0 {
+				r = float64(s.TP) / float64(s.TP+s.FN)
+			}
+			fmt.Fprintf(&b, "%-22s %3d %3d %3d  %9.2f  %6.2f\n", c, s.TP, s.FP, s.FN, p, r)
+		}
+		t.Log(b.String())
+	})
+	for _, f := range all {
+		t.Run(f.Name, func(t *testing.T) {
+			t.Parallel()
+			v := runFixture(t, f)
+			mu.Lock()
+			for c, s := range Tally(f, v) {
+				cur := totals[c]
+				totals[c] = ClassScore{TP: cur.TP + s.TP, FP: cur.FP + s.FP, FN: cur.FN + s.FN}
+			}
+			mu.Unlock()
+			if fails := Score(f, v); len(fails) > 0 {
+				out, _ := json.MarshalIndent(v, "", "  ")
+				for _, msg := range fails {
+					t.Error(msg)
+				}
+				t.Logf("verdict:\n%s", out)
+			}
+		})
+	}
+}
+
+func TestSuiteComposition(t *testing.T) {
+	all, err := LoadDir(fixtureDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	zeroOverlap, negatives, ts, py := 0, 0, 0, 0
+	for _, f := range all {
+		switch {
+		case !f.Positive():
+			negatives++
+		case f.ZeroOverlap():
+			zeroOverlap++
+		}
+		switch {
+		case strings.HasPrefix(f.Name, "ts-"):
+			ts++
+		case strings.HasPrefix(f.Name, "py-"):
+			py++
+		}
+	}
+	t.Logf("fixtures=%d zero-overlap positives=%d negatives=%d typescript=%d python=%d", len(all), zeroOverlap, negatives, ts, py)
+	if len(all) < 30 {
+		t.Errorf("need at least 30 fixtures, have %d", len(all))
+	}
+	if zeroOverlap < 10 {
+		t.Errorf("need at least 10 zero-file-overlap positives, have %d", zeroOverlap)
+	}
+	if negatives < 8 {
+		t.Errorf("need at least 8 clean negatives, have %d", negatives)
+	}
+}
+
+func TestVerdictsAreDeterministic(t *testing.T) {
 	all, err := LoadDir(fixtureDir)
 	if err != nil {
 		t.Fatal(err)
@@ -86,13 +182,23 @@ func TestFixtures(t *testing.T) {
 	for _, f := range all {
 		t.Run(f.Name, func(t *testing.T) {
 			t.Parallel()
-			v := runFixture(t, f)
-			if fails := Score(f, v); len(fails) > 0 {
-				out, _ := json.MarshalIndent(v, "", "  ")
-				for _, msg := range fails {
-					t.Error(msg)
+			r := f.Build(t)
+			repo, err := gitx.Open(r.Dir)
+			if err != nil {
+				t.Fatal(err)
+			}
+			render := func(noCache bool) string {
+				v, err := engine.Check(context.Background(), repo, "a", "b", engine.Options{Rules: rules.All(), NoCache: noCache})
+				if err != nil {
+					t.Fatal(err)
 				}
-				t.Logf("verdict:\n%s", out)
+				v.Stats.DurationMS = 0
+				b, _ := json.Marshal(v)
+				return string(b)
+			}
+			first, second := render(false), render(true)
+			if first != second {
+				t.Errorf("verdicts differ:\n%s\n%s", first, second)
 			}
 		})
 	}
