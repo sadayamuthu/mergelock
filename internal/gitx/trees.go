@@ -20,7 +20,7 @@ type Change struct {
 
 // DiffTree lists files changed between two commits, with rename detection.
 func (r *Repo) DiffTree(from, to string) ([]Change, error) {
-	out, _, err := r.git("diff-tree", "-r", "-M", "--no-commit-id", "--name-status", "-z", from, to)
+	out, _, err := r.git("diff-tree", "-r", "-M", "--no-commit-id", "--name-status", "-z", "--end-of-options", from, to)
 	if err != nil {
 		return nil, err
 	}
@@ -60,7 +60,7 @@ func parseDiffTree(out []byte) ([]Change, error) {
 
 // ListTree maps every blob path in commit to its object id.
 func (r *Repo) ListTree(commit string) (map[string]string, error) {
-	out, _, err := r.git("ls-tree", "-r", "-z", "--full-tree", commit)
+	out, _, err := r.git("ls-tree", "-r", "-z", "--full-tree", "--end-of-options", commit)
 	if err != nil {
 		return nil, err
 	}

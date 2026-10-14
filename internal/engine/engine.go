@@ -79,7 +79,7 @@ func Check(ctx context.Context, repo *gitx.Repo, branchA, branchB string, opts O
 	if len(bases) > 1 {
 		v.Notes = append(v.Notes, "multiple_merge_bases")
 	}
-	mt, err := repo.MergeTree(branchA, branchB)
+	mt, err := repo.MergeTree(commitA, commitB)
 	if err != nil {
 		return nil, err
 	}

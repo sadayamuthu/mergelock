@@ -123,7 +123,7 @@ func (r *Repo) ResolveCommit(ref string) (string, error) {
 
 // MergeBases returns all merge bases of a and b; empty when histories are unrelated.
 func (r *Repo) MergeBases(a, b string) ([]string, error) {
-	out, code, err := r.git("merge-base", "--all", a, b)
+	out, code, err := r.git("merge-base", "--all", "--end-of-options", a, b)
 	if code == 1 {
 		return nil, nil
 	}

@@ -21,8 +21,10 @@ type MergeTreeResult struct {
 
 // MergeTree runs a dry merge of a and b without touching the working tree.
 func (r *Repo) MergeTree(a, b string) (*MergeTreeResult, error) {
-	out, code, err := r.git("merge-tree", "--write-tree", "--name-only", "--messages", "-z", a, b)
-	if code != 0 && code != 1 {
+	out, code, err := r.git("merge-tree", "--write-tree", "--name-only", "--messages", "-z", "--end-of-options", a, b)
+	// Exit 1 means "conflicts" only when a tree was written; merge-tree also
+	// exits 1 with no output for an unusable revision.
+	if (code != 0 && code != 1) || (code == 1 && len(out) == 0) {
 		return nil, err
 	}
 	res, perr := parseMergeTree(out)

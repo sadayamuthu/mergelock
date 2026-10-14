@@ -255,3 +255,27 @@ func TestCurrentBranchAndRefBlobs(t *testing.T) {
 		t.Fatalf("detached CurrentBranch err = %v", err)
 	}
 }
+
+// Revision arguments must never be parsed as options: "-h" is a bad revision
+// (exit 128), not a request for usage (exit 129).
+func TestRevisionArgsAreNotOptions(t *testing.T) {
+	r := gittest.New(t)
+	sha := r.Commit("base")
+	repo, err := Open(r.Dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	calls := map[string]func() error{
+		"MergeBases": func() error { _, err := repo.MergeBases("-h", sha); return err },
+		"MergeTree":  func() error { _, err := repo.MergeTree("-h", sha); return err },
+		"DiffTree":   func() error { _, err := repo.DiffTree(sha, "-h"); return err },
+		"ListTree":   func() error { _, err := repo.ListTree("-h"); return err },
+	}
+	for name, call := range calls {
+		err := call()
+		var ge *Error
+		if !errors.As(err, &ge) || ge.Code == 129 {
+			t.Errorf("%s(\"-h\") = %v; want a bad-revision git error, not usage", name, err)
+		}
+	}
+}
