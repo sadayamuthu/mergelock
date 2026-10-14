@@ -1,0 +1,29 @@
+a adds a required parameter to UserRepo.save; b calls save on an instance of a class from a bare package. The receiver type is known (Redis), just not resolvable, so this must not fall back to a medium name match.
+-- base/src/repo.ts --
+export class UserRepo {
+  save(u: string): void {
+    console.log(u);
+  }
+}
+-- base/src/cache.ts --
+export function warm(): void {}
+-- a/src/repo.ts --
+export class UserRepo {
+  save(u: string, opts: { force: boolean }): void {
+    console.log(u, opts);
+  }
+}
+-- b/src/cache.ts --
+import { UserRepo } from "./repo";
+import { Redis } from "ioredis";
+
+export function warm(): void {
+  const r = new Redis();
+  r.save("k");
+}
+
+export function makeRepo(): UserRepo {
+  return new UserRepo();
+}
+-- expected.json --
+{"result": "clean", "findings": []}

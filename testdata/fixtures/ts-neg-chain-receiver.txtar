@@ -1,0 +1,29 @@
+a adds a required parameter to UserRepo.save; b calls save through a member chain (svc.repo.save). Only single-hop receivers of unknown type fall back to medium; chains are dropped.
+-- base/src/repo.ts --
+export class UserRepo {
+  save(u: string): void {
+    console.log(u);
+  }
+}
+-- base/src/jobs.ts --
+export function run(): void {}
+-- a/src/repo.ts --
+export class UserRepo {
+  save(u: string, opts: { force: boolean }): void {
+    console.log(u, opts);
+  }
+}
+-- b/src/jobs.ts --
+import { UserRepo } from "./repo";
+
+export function run(): void {}
+
+export function persist(svc: any): void {
+  svc.repo.save("k");
+}
+
+export function makeRepo(): UserRepo {
+  return new UserRepo();
+}
+-- expected.json --
+{"result": "clean", "findings": []}

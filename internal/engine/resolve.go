@@ -29,11 +29,14 @@ func (rc *RuleContext) Matches(side *Side, ref model.Reference, sym model.Symbol
 		}
 		return verdict.MinConfidence(verdict.ConfidenceHigh, ad.MaxConfidence()), true
 	}
+	// Medium fallback: only a single-hop receiver whose type is unknown. A
+	// known but unresolvable type (e.g. a class from a bare package) and
+	// member chains (svc.repo.save()) are dropped [D6].
 	c := ref.Callee
-	if sym.Kind != model.KindMethod || len(c.Path) == 0 || c.Base == "this" {
+	if sym.Kind != model.KindMethod || len(c.Path) != 1 || c.Base == "this" || c.ReceiverType != "" {
 		return "", false
 	}
-	if c.Path[len(c.Path)-1] != sym.Name[strings.LastIndex(sym.Name, ".")+1:] {
+	if c.Path[0] != sym.Name[strings.LastIndex(sym.Name, ".")+1:] {
 		return "", false
 	}
 	if ref.File != sym.File && !res.importsModule(side.Commit, ref.File, sym.File) {
