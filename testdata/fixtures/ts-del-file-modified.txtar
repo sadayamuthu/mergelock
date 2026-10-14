@@ -1,0 +1,13 @@
+a deletes a whole module; b edits a function in it. merge-tree already reports the file-level modify/delete, so the symbol-level deleted_symbol_modified finding is suppressed (no double report).
+-- base/src/legacy.ts --
+export function legacyFormat(s: string): string {
+  return s.toUpperCase();
+}
+-- a.deleted --
+src/legacy.ts
+-- b/src/legacy.ts --
+export function legacyFormat(s: string): string {
+  return s.trim().toUpperCase();
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "modify_delete", "kind": "file", "min_confidence": "certain"}]}

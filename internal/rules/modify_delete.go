@@ -20,6 +20,7 @@ func (ModifyDelete) Run(rc *engine.RuleContext) []verdict.Finding {
 	if this == nil || other == nil {
 		return out
 	}
+	gitFiles := fileConflictPaths(rc) // already reported by merge-tree
 	for _, key := range sortedKeys(this.Removed) {
 		s := this.Removed[key]
 		renamedTo := ""
@@ -32,7 +33,7 @@ func (ModifyDelete) Run(rc *engine.RuleContext) []verdict.Finding {
 		if !modified {
 			ch, modified = other.BodyChanged[key]
 		}
-		if modified {
+		if modified && !gitFiles[s.File] {
 			out = append(out, verdict.Finding{
 				Class: "modify_delete", Kind: "deleted_symbol_modified",
 				Severity: verdict.SeverityError, Confidence: verdict.ConfidenceCertain,
@@ -64,6 +65,23 @@ func (ModifyDelete) Run(rc *engine.RuleContext) []verdict.Finding {
 			Symbol: s.Name, ChangedIn: rc.This.Branch, ChangedAt: deletedAt, RenamedTo: renamedTo,
 			UsedIn: rc.Other.Branch, CallSites: sites, SuggestedAction: action,
 		})
+	}
+	return out
+}
+
+// fileConflictPaths lists paths merge-tree reports as modify/delete. Both
+// passes need it: the file finding is emitted only in the primary pass.
+func fileConflictPaths(rc *engine.RuleContext) map[string]bool {
+	out := map[string]bool{}
+	if rc.MergeTree == nil {
+		return out
+	}
+	for _, m := range rc.MergeTree.Messages {
+		if classifyConflict(m.Message) == "modify_delete" {
+			for _, p := range m.Paths {
+				out[p] = true
+			}
+		}
 	}
 	return out
 }
