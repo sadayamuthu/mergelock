@@ -11,7 +11,6 @@ import (
 	tsjs "github.com/tree-sitter/tree-sitter-javascript/bindings/go"
 	tsts "github.com/tree-sitter/tree-sitter-typescript/bindings/go"
 
-	"github.com/sadayamuthu/mergelock/internal/lang"
 	"github.com/sadayamuthu/mergelock/internal/model"
 	"github.com/sadayamuthu/mergelock/internal/verdict"
 )
@@ -74,11 +73,3 @@ func (a *Adapter) Parse(p string, src []byte) (*model.FileFacts, error) {
 	x.applyLocalExports()
 	return x.facts, nil
 }
-
-// ResolveModule is implemented in Task 10.
-func (a *Adapter) ResolveModule(fromFile, spec string, fs lang.FS) (string, bool) {
-	return "", false
-}
-
-// tsconfig is filled in by Task 10.
-type tsconfig struct{}
