@@ -107,7 +107,8 @@ func TestCLIUsageErrors(t *testing.T) {
 	if code, _, errOut := runCLI(t, t.TempDir(), "check", "a"); code != 3 || !strings.Contains(errOut, "not a git repository") {
 		t.Errorf("non-repo: %d %q", code, errOut)
 	}
-	if code, out, _ := runCLI(t, r.Dir, "version"); code != 0 || !strings.HasPrefix(out, "mergelock ") {
+	code, out, _ := runCLI(t, r.Dir, "version")
+	if code != 0 || !strings.HasPrefix(out, "mergelock ") || !strings.Contains(out, "\ngit 2.") || !strings.Contains(out, "adapters: typescript@1 python@1") {
 		t.Errorf("version: %d %q", code, out)
 	}
 }

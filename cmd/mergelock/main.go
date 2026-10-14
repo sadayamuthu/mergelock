@@ -19,8 +19,10 @@ const usage = `usage: mergelock <command> [arguments]
 commands:
   check <branchA> [branchB] [--format json|text] [--no-cache]
         compare two branches; branchB defaults to the configured target
+  serve
+        run the MCP server on stdio (tools: check, claims)
   version
-        print version information
+        print version, git version and language adapters
 `
 
 func main() {
@@ -40,9 +42,10 @@ func run(ctx context.Context, args []string, dir string, stdout, stderr io.Write
 	switch args[0] {
 	case "check":
 		return runCheck(ctx, args[1:], dir, stdout, stderr)
+	case "serve":
+		return runServe(ctx, dir, stderr)
 	case "version":
-		fmt.Fprintf(stdout, "mergelock %s\n", version)
-		return 0
+		return runVersion(stdout)
 	case "help", "-h", "--help":
 		fmt.Fprint(stdout, usage)
 		return 0

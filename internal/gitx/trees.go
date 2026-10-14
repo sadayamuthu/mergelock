@@ -2,6 +2,7 @@ package gitx
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -139,4 +140,38 @@ func (b *BlobReader) Read(object string) ([]byte, bool, error) {
 func (b *BlobReader) Close() error {
 	b.in.Close()
 	return b.cmd.Wait()
+}
+
+// CurrentBranch returns the checked-out branch name.
+func (r *Repo) CurrentBranch() (string, error) {
+	out, code, err := r.git("symbolic-ref", "--quiet", "--short", "HEAD")
+	if code == 1 {
+		return "", errors.New("HEAD is detached; pass a branch name")
+	}
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(out)), nil
+}
+
+// RefBlobs returns the content of every ref under prefix that points directly
+// at a blob (how claims and verdicts are stored), keyed by full ref name.
+func (r *Repo) RefBlobs(prefix string) (map[string][]byte, error) {
+	out, _, err := r.git("for-each-ref", "--format=%(objectname) %(objecttype) %(refname)", prefix)
+	if err != nil {
+		return nil, err
+	}
+	blobs := map[string][]byte{}
+	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
+		f := strings.SplitN(line, " ", 3)
+		if len(f) != 3 || f[1] != "blob" {
+			continue
+		}
+		data, _, err := r.git("cat-file", "blob", f[0])
+		if err != nil {
+			return nil, err
+		}
+		blobs[f[2]] = data
+	}
+	return blobs, nil
 }

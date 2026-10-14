@@ -7,8 +7,8 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"slices"
 
-	"github.com/sadayamuthu/mergelock/internal/config"
 	"github.com/sadayamuthu/mergelock/internal/engine"
 	"github.com/sadayamuthu/mergelock/internal/gitx"
 	"github.com/sadayamuthu/mergelock/internal/rules"
@@ -38,25 +38,17 @@ func runCheck(ctx context.Context, args []string, dir string, stdout, stderr io.
 		*format = "text" // the format itself is invalid; report in plain text
 		return fail(fmt.Errorf("unknown format %q (want json or text)", bad))
 	}
-	if len(positional) < 1 || len(positional) > 2 {
+	if len(positional) < 1 || len(positional) > 2 || slices.Contains(positional, "") {
 		return fail(errors.New("usage: mergelock check <branchA> [branchB]"))
 	}
 	if err := gitx.RequireVersion(2, 38); err != nil {
 		return fail(err)
 	}
-	repo, err := gitx.Open(dir)
-	if err != nil {
-		return fail(err)
-	}
-	cfg, err := config.Load(repo.Dir)
-	if err != nil {
-		return fail(err)
-	}
-	a, b := positional[0], cfg.Target
+	a, b := positional[0], "" // empty b means the configured target
 	if len(positional) == 2 {
 		b = positional[1]
 	}
-	v, err := engine.Check(ctx, repo, a, b, engine.Options{Config: cfg, Rules: rules.All(), NoCache: *noCache})
+	v, err := engine.CheckDir(ctx, dir, a, b, engine.Options{Rules: rules.All(), NoCache: *noCache})
 	if err != nil {
 		return fail(err)
 	}

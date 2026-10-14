@@ -230,3 +230,28 @@ func TestListTreeAndBlobReader(t *testing.T) {
 		t.Fatal("reader broken after missing object")
 	}
 }
+
+func TestCurrentBranchAndRefBlobs(t *testing.T) {
+	r := gittest.New(t)
+	r.Commit("base")
+	r.Branch("agent-1/work")
+	repo, _ := Open(r.Dir)
+	if b, err := repo.CurrentBranch(); err != nil || b != "agent-1/work" {
+		t.Fatalf("CurrentBranch = %q, %v", b, err)
+	}
+	r.Write("claim.json", `{"branch":"agent-1/work"}`)
+	oid := r.Git("hash-object", "-w", "claim.json")
+	r.Git("update-ref", "refs/mergelock/claims/agent-1/work", oid)
+	r.Git("update-ref", "refs/mergelock/claims/not-a-blob", r.Git("rev-parse", "HEAD"))
+	blobs, err := repo.RefBlobs("refs/mergelock/claims/")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(blobs) != 1 || string(blobs["refs/mergelock/claims/agent-1/work"]) != `{"branch":"agent-1/work"}` {
+		t.Fatalf("RefBlobs = %v", blobs)
+	}
+	r.Git("checkout", "-q", "--detach")
+	if _, err := repo.CurrentBranch(); err == nil || !strings.Contains(err.Error(), "detached") {
+		t.Fatalf("detached CurrentBranch err = %v", err)
+	}
+}
