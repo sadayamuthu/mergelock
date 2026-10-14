@@ -1,0 +1,11 @@
+Negative: the branches edit different files.
+-- base/docs/a.md --
+alpha
+-- base/docs/b.md --
+beta
+-- a/docs/a.md --
+alpha two
+-- b/docs/b.md --
+beta two
+-- expected.json --
+{"result": "clean", "findings": []}

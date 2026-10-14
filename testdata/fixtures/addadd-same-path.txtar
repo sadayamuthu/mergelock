@@ -1,0 +1,9 @@
+Both branches create the same new file with different content.
+-- base/README.md --
+# demo
+-- a/docs/setup.md --
+Install with brew.
+-- b/docs/setup.md --
+Install with go install.
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "add_add", "min_confidence": "certain"}]}

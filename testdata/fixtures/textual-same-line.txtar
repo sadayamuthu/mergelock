@@ -1,0 +1,9 @@
+Both branches edit the same line of a text file.
+-- base/notes.txt --
+status: draft
+-- a/notes.txt --
+status: review
+-- b/notes.txt --
+status: final
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "textual", "min_confidence": "certain"}]}
