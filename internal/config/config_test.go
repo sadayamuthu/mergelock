@@ -88,3 +88,23 @@ func TestLoadReadsFile(t *testing.T) {
 		t.Fatalf("empty file should give defaults: %+v, %v", c, err)
 	}
 }
+
+func TestParseRejectsBadRuleSettings(t *testing.T) {
+	cases := map[string]struct{ src, key string }{
+		"misspelled rule id":     {"rules:\n  signature_calller: off\n", "signature_calller"},
+		"non-numeric similarity": {"rules:\n  duplicate_definition:\n    similarity: high\n", "similarity"},
+		"similarity above 1":     {"rules:\n  duplicate_definition:\n    similarity: 1.5\n", "similarity"},
+		"similarity below 0":     {"rules:\n  duplicate_definition:\n    similarity: -0.1\n", "similarity"},
+	}
+	for name, tc := range cases {
+		_, err := config.Parse([]byte(tc.src))
+		if err == nil || !strings.Contains(err.Error(), ".mergelock.yml") || !strings.Contains(err.Error(), tc.key) {
+			t.Errorf("%s: err = %v, want error naming .mergelock.yml and %q", name, err, tc.key)
+		}
+	}
+	for _, ok := range []string{"rules:\n  duplicate_definition:\n    similarity: 0\n", "rules:\n  duplicate_definition:\n    similarity: 1\n", "rules:\n  claim_drift: off\n  interface_drift: off\n"} {
+		if _, err := config.Parse([]byte(ok)); err != nil {
+			t.Errorf("Parse(%q) = %v, want ok", ok, err)
+		}
+	}
+}

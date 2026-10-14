@@ -140,3 +140,12 @@ func TestCLIPanicExits3(t *testing.T) {
 		t.Errorf("stdout should be a JSON error, got %q", out)
 	}
 }
+
+func TestCLIInvalidRuleConfigExits3(t *testing.T) {
+	r := cliRepo(t)
+	r.Write(".mergelock.yml", "rules:\n  signature_calller: off\n")
+	code, _, errOut := runCLI(t, r.Dir, "check", "a", "c")
+	if code != 3 || !strings.Contains(errOut, ".mergelock.yml") || !strings.Contains(errOut, "signature_calller") {
+		t.Fatalf("exit %d stderr %q; want 3 naming .mergelock.yml and the key", code, errOut)
+	}
+}

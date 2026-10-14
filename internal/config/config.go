@@ -8,6 +8,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
+	"sort"
 
 	"gopkg.in/yaml.v3"
 )
@@ -20,6 +22,14 @@ const (
 var knownKeys = map[string]bool{
 	"target": true, "test": true, "block_on": true, "min_confidence": true,
 	"strict_claims": true, "lock_timeout_seconds": true, "rules": true,
+}
+
+// RuleIDs are the rule ids `rules:` may configure: every class in the
+// product spec, including those v0.1 does not implement yet (configuring
+// them is accepted and has no effect).
+var RuleIDs = []string{
+	"textual", "signature_caller", "modify_delete", "add_add", "duplicate_definition",
+	"interface_drift", "registry_hotspot", "test_contract", "claim_drift",
 }
 
 type Config struct {
@@ -67,6 +77,9 @@ func Parse(data []byte) (*Config, error) {
 			if err := v.Decode(&c.rules); err != nil {
 				return nil, fmt.Errorf("invalid %s: rules: %w", FileName, err)
 			}
+			if err := c.validateRules(); err != nil {
+				return nil, err
+			}
 		}
 	}
 	return c, nil
@@ -100,4 +113,32 @@ func (c *Config) RuleFloat(id, key string, def float64) float64 {
 		return def
 	}
 	return f
+}
+
+func (c *Config) validateRules() error {
+	ids := make([]string, 0, len(c.rules))
+	for id := range c.rules {
+		ids = append(ids, id)
+	}
+	sort.Strings(ids)
+	for _, id := range ids {
+		if !slices.Contains(RuleIDs, id) {
+			return fmt.Errorf("invalid %s: unknown rule %q under rules", FileName, id)
+		}
+	}
+	n, ok := c.rules["duplicate_definition"]
+	if !ok || n.Kind != yaml.MappingNode {
+		return nil
+	}
+	var m map[string]yaml.Node
+	if err := n.Decode(&m); err != nil {
+		return fmt.Errorf("invalid %s: rules.duplicate_definition: %w", FileName, err)
+	}
+	if v, ok := m["similarity"]; ok {
+		var f float64
+		if err := v.Decode(&f); err != nil || f < 0 || f > 1 {
+			return fmt.Errorf("invalid %s: rules.duplicate_definition.similarity must be a number between 0 and 1, got %q", FileName, v.Value)
+		}
+	}
+	return nil
 }
