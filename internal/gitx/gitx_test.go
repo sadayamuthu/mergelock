@@ -2,6 +2,7 @@ package gitx
 
 import (
 	"errors"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -28,6 +29,18 @@ func TestParseVersion(t *testing.T) {
 func TestOpenNotRepo(t *testing.T) {
 	if _, err := Open(t.TempDir()); !errors.Is(err, ErrNotRepo) {
 		t.Fatalf("Open(non-repo) = %v, want ErrNotRepo", err)
+	}
+}
+
+// Other exit-128 failures (bad gitfile, dubious ownership) keep git's message.
+func TestOpenSurfacesOtherGitErrors(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".git"), []byte("garbage\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Open(dir)
+	if err == nil || errors.Is(err, ErrNotRepo) || !strings.Contains(err.Error(), "invalid gitfile format") {
+		t.Fatalf("Open(bad gitfile) = %v, want git's own message", err)
 	}
 }
 

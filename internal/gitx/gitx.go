@@ -64,7 +64,7 @@ func Open(dir string) (*Repo, error) {
 	out, _, err := run(dir, nil, "rev-parse", "--path-format=absolute", "--show-toplevel", "--git-common-dir")
 	if err != nil {
 		var ge *Error
-		if errors.As(err, &ge) && ge.Code == 128 {
+		if errors.As(err, &ge) && ge.Code == 128 && strings.Contains(ge.Stderr, "not a git repository") {
 			return nil, ErrNotRepo
 		}
 		return nil, err
