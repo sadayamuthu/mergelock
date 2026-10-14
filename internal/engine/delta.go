@@ -1,6 +1,7 @@
 package engine
 
 import (
+	"context"
 	"sort"
 
 	"github.com/sadayamuthu/mergelock/internal/gitx"
@@ -23,7 +24,7 @@ type Delta struct {
 	SymbolsCompared int
 }
 
-func computeDelta(l *Loader, base, commit string, changes []gitx.Change) (*Delta, error) {
+func computeDelta(ctx context.Context, l *Loader, base, commit string, changes []gitx.Change) (*Delta, error) {
 	d := &Delta{
 		Commit:      commit,
 		Added:       map[string]model.Symbol{},
@@ -33,6 +34,9 @@ func computeDelta(l *Loader, base, commit string, changes []gitx.Change) (*Delta
 		Renamed:     map[string]string{},
 	}
 	for _, ch := range changes {
+		if err := ctx.Err(); err != nil { // stop parsing once the check is cancelled
+			return nil, err
+		}
 		oldPath, newPath := ch.Path, ch.Path
 		switch ch.Status {
 		case 'A', 'C':

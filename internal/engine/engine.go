@@ -97,11 +97,11 @@ func Check(ctx context.Context, repo *gitx.Repo, branchA, branchB string, opts O
 	}
 	defer blobs.Close()
 	loader := NewLoader(repo, blobs, cache.Open(repo.CommonDir, opts.NoCache), reg)
-	deltaA, err := computeDelta(loader, base, commitA, changesA)
+	deltaA, err := computeDelta(ctx, loader, base, commitA, changesA)
 	if err != nil {
 		return nil, err
 	}
-	deltaB, err := computeDelta(loader, base, commitB, changesB)
+	deltaB, err := computeDelta(ctx, loader, base, commitB, changesB)
 	if err != nil {
 		return nil, err
 	}

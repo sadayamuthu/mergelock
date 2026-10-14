@@ -1,6 +1,8 @@
 package engine
 
 import (
+	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -71,7 +73,7 @@ func TestComputeDelta(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	d, err := computeDelta(l, base, head, changes)
+	d, err := computeDelta(context.Background(), l, base, head, changes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,6 +108,28 @@ func TestComputeDelta(t *testing.T) {
 	}
 	if d.SymbolsCompared == 0 {
 		t.Error("SymbolsCompared not counted")
+	}
+}
+
+// A cancelled check stops before parsing more changed files.
+func TestComputeDeltaHonorsCancellation(t *testing.T) {
+	r := gittest.New(t)
+	r.Write("src/auth.ts", authBase)
+	base := r.Commit("base")
+	r.Write("src/auth.ts", authA)
+	head := r.Commit("a")
+	l, repo := newLoader(t, r.Dir, true)
+	changes, err := repo.DiffTree(base, head)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if _, err := computeDelta(ctx, l, base, head, changes); !errors.Is(err, context.Canceled) {
+		t.Fatalf("computeDelta(cancelled) err = %v, want context.Canceled", err)
+	}
+	if len(l.Languages) != 0 {
+		t.Errorf("nothing should be parsed after cancellation, languages = %v", l.Languages)
 	}
 }
 
