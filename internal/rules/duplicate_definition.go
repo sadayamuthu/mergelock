@@ -39,6 +39,7 @@ func (DuplicateDefinition) Run(rc *engine.RuleContext) []verdict.Finding {
 			}
 			kind, sim := "", 0.0
 			switch {
+			// Methods are class-scoped (Class.method); a same-named class already reports.
 			case a.Name == b.Name && a.File != b.File && a.Kind != model.KindMethod:
 				kind = "same_name"
 			case a.Name != b.Name && len(a.Shingles) > 0 && len(b.Shingles) > 0:

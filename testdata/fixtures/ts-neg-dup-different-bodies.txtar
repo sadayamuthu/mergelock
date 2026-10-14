@@ -2,19 +2,30 @@ Negative: both branches add unrelated helpers.
 -- base/src/index.ts --
 export const version = "1";
 -- a/src/sum.ts --
-export function sum(xs: number[]): number {
+export function summarize(xs: number[], limit: number): number {
   let total = 0;
+  let count = 0;
   for (const x of xs) {
-    total += x;
+    if (x > limit) {
+      continue;
+    }
+    total += x * 2;
+    count += 1;
   }
-  return total;
+  return count === 0 ? 0 : total / count;
 }
 -- b/src/caps.ts --
-export function capitalize(s: string): string {
-  if (s.length === 0) {
-    return s;
+export function normalizeTitle(s: string): string {
+  const parts = s.trim().split(" ");
+  const out: string[] = [];
+  while (parts.length > 0) {
+    const word = parts.shift() as string;
+    if (word.length === 0) {
+      continue;
+    }
+    out.push(word[0].toUpperCase() + word.slice(1).toLowerCase());
   }
-  return s[0].toUpperCase() + s.slice(1);
+  return out.join(" ");
 }
 -- expected.json --
 {"result": "clean", "findings": []}
