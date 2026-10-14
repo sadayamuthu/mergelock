@@ -15,7 +15,10 @@ import (
 	"github.com/sadayamuthu/mergelock/internal/verdict"
 )
 
-func runCheck(ctx context.Context, args []string, dir string, stdout, stderr io.Writer) int {
+// checkRules is the rule set the check command runs; tests replace it.
+var checkRules = rules.All
+
+func runCheck(ctx context.Context, args []string, dir string, stdout, stderr io.Writer) (code int) {
 	fs := flag.NewFlagSet("check", flag.ContinueOnError)
 	fs.SetOutput(stderr)
 	format := fs.String("format", "json", "output format: json or text")
@@ -33,6 +36,12 @@ func runCheck(ctx context.Context, args []string, dir string, stdout, stderr io.
 		}
 		return verdict.ExitOperational
 	}
+	// A panic is an operational failure: exit 3, never 2 ("conflict").
+	defer func() {
+		if p := recover(); p != nil {
+			code = fail(fmt.Errorf("internal error: %v", p))
+		}
+	}()
 	if *format != "json" && *format != "text" {
 		bad := *format
 		*format = "text" // the format itself is invalid; report in plain text
@@ -48,7 +57,7 @@ func runCheck(ctx context.Context, args []string, dir string, stdout, stderr io.
 	if len(positional) == 2 {
 		b = positional[1]
 	}
-	v, err := engine.CheckDir(ctx, dir, a, b, engine.Options{Rules: rules.All(), NoCache: *noCache})
+	v, err := engine.CheckDir(ctx, dir, a, b, engine.Options{Rules: checkRules(), NoCache: *noCache})
 	if err != nil {
 		return fail(err)
 	}

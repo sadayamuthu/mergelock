@@ -5,6 +5,7 @@ package mcpserver
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"sort"
 	"time"
 
@@ -68,7 +69,12 @@ func New(d Deps) *mcp.Server {
 	return s
 }
 
-func (d Deps) check(ctx context.Context, _ *mcp.CallToolRequest, in CheckInput) (*mcp.CallToolResult, verdict.Verdict, error) {
+func (d Deps) check(ctx context.Context, _ *mcp.CallToolRequest, in CheckInput) (_ *mcp.CallToolResult, _ verdict.Verdict, err error) {
+	defer func() { // a panic must not take the server down; report a tool error
+		if p := recover(); p != nil {
+			err = fmt.Errorf("internal error: %v", p)
+		}
+	}()
 	v, err := engine.CheckDir(ctx, d.Dir, in.Branch, in.Against, engine.Options{Rules: d.Rules})
 	if err != nil {
 		return nil, verdict.Verdict{}, err

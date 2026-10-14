@@ -34,7 +34,13 @@ func main() {
 	os.Exit(run(context.Background(), os.Args[1:], dir, os.Stdout, os.Stderr))
 }
 
-func run(ctx context.Context, args []string, dir string, stdout, stderr io.Writer) int {
+func run(ctx context.Context, args []string, dir string, stdout, stderr io.Writer) (code int) {
+	defer func() {
+		if p := recover(); p != nil {
+			fmt.Fprintln(stderr, "mergelock: internal error:", p)
+			code = verdict.ExitOperational
+		}
+	}()
 	if len(args) == 0 {
 		fmt.Fprint(stderr, usage)
 		return verdict.ExitOperational

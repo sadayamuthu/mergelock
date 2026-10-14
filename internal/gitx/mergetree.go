@@ -48,7 +48,7 @@ func parseMergeTree(out []byte) (*MergeTreeResult, error) {
 	i++
 	for i < len(parts) && parts[i] != "" {
 		n, err := strconv.Atoi(parts[i])
-		if err != nil {
+		if err != nil || n < 0 {
 			return nil, fmt.Errorf("malformed merge-tree output at %q", parts[i])
 		}
 		i++

@@ -2,13 +2,16 @@ package mcpserver
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/modelcontextprotocol/go-sdk/mcp"
 
+	"github.com/sadayamuthu/mergelock/internal/engine"
 	"github.com/sadayamuthu/mergelock/internal/gittest"
 	"github.com/sadayamuthu/mergelock/internal/rules"
+	"github.com/sadayamuthu/mergelock/internal/verdict"
 )
 
 func repoWithConflictAndClaims(t *testing.T) *gittest.Repo {
@@ -112,5 +115,27 @@ func TestClaimsTool(t *testing.T) {
 	second := list[1].(map[string]any)["branch"]
 	if first != "agent-2/newer" || second != "agent-1/live" {
 		t.Errorf("order = %v, %v; want newest first", first, second)
+	}
+}
+
+type panicRule struct{}
+
+func (panicRule) ID() string { return "panic_rule" }
+func (panicRule) Run(*engine.RuleContext) []verdict.Finding {
+	panic("boom")
+}
+
+func TestCheckToolPanicIsToolError(t *testing.T) {
+	r := repoWithConflictAndClaims(t)
+	d := deps(r.Dir)
+	d.Rules = []engine.Rule{panicRule{}}
+	cs := connect(t, d)
+	res, err := cs.CallTool(context.Background(), &mcp.CallToolParams{Name: "check", Arguments: map[string]any{"branch": "a", "against": "b"}})
+	if err != nil || !res.IsError {
+		t.Fatalf("panic must be a tool error: %v %+v", err, res)
+	}
+	text := res.Content[0].(*mcp.TextContent).Text
+	if !strings.Contains(text, "boom") {
+		t.Errorf("tool error text = %q", text)
 	}
 }

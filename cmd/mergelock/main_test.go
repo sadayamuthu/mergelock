@@ -7,7 +7,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/sadayamuthu/mergelock/internal/engine"
 	"github.com/sadayamuthu/mergelock/internal/gittest"
+	"github.com/sadayamuthu/mergelock/internal/verdict"
 )
 
 func cliRepo(t *testing.T) *gittest.Repo {
@@ -110,5 +112,31 @@ func TestCLIUsageErrors(t *testing.T) {
 	code, out, _ := runCLI(t, r.Dir, "version")
 	if code != 0 || !strings.HasPrefix(out, "mergelock ") || !strings.Contains(out, "\ngit 2.") || !strings.Contains(out, "adapters: typescript@1 python@1") {
 		t.Errorf("version: %d %q", code, out)
+	}
+}
+
+type panicRule struct{}
+
+func (panicRule) ID() string { return "panic_rule" }
+func (panicRule) Run(*engine.RuleContext) []verdict.Finding {
+	panic("boom")
+}
+
+// A panic is an operational failure (exit 3), never "conflict" (exit 2).
+func TestCLIPanicExits3(t *testing.T) {
+	r := cliRepo(t)
+	orig := checkRules
+	checkRules = func() []engine.Rule { return []engine.Rule{panicRule{}} }
+	t.Cleanup(func() { checkRules = orig })
+	code, out, errOut := runCLI(t, r.Dir, "check", "a", "c")
+	if code != 3 {
+		t.Fatalf("exit = %d, want 3", code)
+	}
+	if !strings.Contains(errOut, "boom") {
+		t.Errorf("stderr = %q", errOut)
+	}
+	var e map[string]string
+	if err := json.Unmarshal([]byte(out), &e); err != nil || !strings.Contains(e["error"], "boom") {
+		t.Errorf("stdout should be a JSON error, got %q", out)
 	}
 }

@@ -279,3 +279,10 @@ func TestRevisionArgsAreNotOptions(t *testing.T) {
 		}
 	}
 }
+
+func TestParseMergeTreeRejectsNegativeCount(t *testing.T) {
+	out := []byte("tree\x00x.txt\x00\x00-1\x00x.txt\x00Auto-merging\x00msg\x00\x00")
+	if _, err := parseMergeTree(out); err == nil {
+		t.Fatal("negative path count must be an error")
+	}
+}
