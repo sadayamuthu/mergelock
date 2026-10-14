@@ -88,3 +88,30 @@ func TestCheckNoMergeBase(t *testing.T) {
 		t.Fatalf("err = %v, want unknown ref", err)
 	}
 }
+
+func TestCheckCoverage(t *testing.T) {
+	r := gittest.New(t)
+	r.Write("src/a.ts", "export function f(): number { return 1; }\n")
+	r.Write("deploy.rb", "puts 1\n")
+	r.Commit("base")
+	r.Branch("a")
+	r.Write("src/a.ts", "export function f(): number { return 2; }\n\nexport const broken = ;\n")
+	r.Commit("a")
+	r.Checkout("main")
+	r.Branch("b")
+	r.Write("deploy.rb", "puts 2\n")
+	r.Commit("b")
+	repo, _ := gitx.Open(r.Dir)
+	v, err := engine.Check(context.Background(), repo, "a", "b", engine.Options{Rules: rules.All()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if strings.Join(v.Coverage.Languages, ",") != "typescript" ||
+		strings.Join(v.Coverage.Unsupported, ",") != "deploy.rb" ||
+		strings.Join(v.Coverage.Partial, ",") != "src/a.ts" {
+		t.Errorf("coverage = %+v", v.Coverage)
+	}
+	if v.Stats.SymbolsCompared == 0 {
+		t.Error("SymbolsCompared = 0")
+	}
+}
