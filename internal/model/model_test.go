@@ -64,10 +64,12 @@ func TestShinglesAndJaccard(t *testing.T) {
 
 func TestNormalizeType(t *testing.T) {
 	cases := map[string]string{
-		" Array< string > ":   "Array",
-		"Map<string, Set<T>>": "Map",
-		"(a: number) => void": "(a:number)=>void",
-		"":                    "",
+		" Array< string > ":           "Array",
+		"Map<string, Set<T>>":         "Map",
+		"(a: number) => void":         "(a:number)=>void",
+		"Array<() => void>":           "Array",
+		"Record<string, (x) => void>": "Record",
+		"":                            "",
 	}
 	for in, want := range cases {
 		if got := NormalizeType(in); got != want {

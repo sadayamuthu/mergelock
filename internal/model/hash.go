@@ -76,10 +76,12 @@ func NormalizeType(s string) string {
 		case unicode.IsSpace(r):
 		case r == '<':
 			depth++
+		case r == '>' && i > 0 && s[i-1] == '=':
+			if depth == 0 {
+				b.WriteRune(r) // arrow `=>`
+			}
 		case r == '>' && depth > 0:
 			depth--
-		case r == '>' && i > 0 && s[i-1] == '=':
-			b.WriteRune(r) // arrow `=>`
 		case depth == 0:
 			b.WriteRune(r)
 		}
