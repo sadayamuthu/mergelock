@@ -1,0 +1,11 @@
+Both branches add parse_date in different modules.
+-- base/app/__init__.py --
+-- a/app/dates.py --
+def parse_date(s):
+    return s.split("-")
+-- b/app/time_utils.py --
+def parse_date(text):
+    year, month, day = text.split("/")
+    return (int(year), int(month), int(day))
+-- expected.json --
+{"result": "warnings", "findings": [{"class": "duplicate_definition", "kind": "same_name", "symbol": "parse_date", "min_confidence": "medium"}]}

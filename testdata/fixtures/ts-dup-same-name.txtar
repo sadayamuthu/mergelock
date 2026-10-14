@@ -1,0 +1,13 @@
+Both branches add a slugify helper in different files.
+-- base/src/index.ts --
+export const version = "1";
+-- a/src/strings.ts --
+export function slugify(s: string): string {
+  return s.toLowerCase().replace(/\s+/g, "-");
+}
+-- b/src/text/slug.ts --
+export function slugify(input: string): string {
+  return input.trim().split(" ").join("-").toLowerCase();
+}
+-- expected.json --
+{"result": "warnings", "findings": [{"class": "duplicate_definition", "kind": "same_name", "symbol": "slugify", "min_confidence": "medium"}]}

@@ -1,0 +1,20 @@
+Negative: both branches add unrelated helpers.
+-- base/src/index.ts --
+export const version = "1";
+-- a/src/sum.ts --
+export function sum(xs: number[]): number {
+  let total = 0;
+  for (const x of xs) {
+    total += x;
+  }
+  return total;
+}
+-- b/src/caps.ts --
+export function capitalize(s: string): string {
+  if (s.length === 0) {
+    return s;
+  }
+  return s[0].toUpperCase() + s.slice(1);
+}
+-- expected.json --
+{"result": "clean", "findings": []}

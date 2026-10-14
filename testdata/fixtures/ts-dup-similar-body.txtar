@@ -1,0 +1,19 @@
+Both branches add the same helper under different names.
+-- base/src/index.ts --
+export const version = "1";
+-- a/src/a.ts --
+export function toSlug(input: string): string {
+  const lower = input.trim().toLowerCase();
+  const dashed = lower.replace(/[^a-z0-9]+/g, "-");
+  const trimmed = dashed.replace(/^-+|-+$/g, "");
+  return trimmed.length > 0 ? trimmed : "item";
+}
+-- b/src/b.ts --
+export function makeSlug(value: string): string {
+  const low = value.trim().toLowerCase();
+  const dash = low.replace(/[^a-z0-9]+/g, "-");
+  const clean = dash.replace(/^-+|-+$/g, "");
+  return clean.length > 0 ? clean : "entry";
+}
+-- expected.json --
+{"result": "warnings", "findings": [{"class": "duplicate_definition", "kind": "similar_body", "symbol": "toSlug / makeSlug", "min_confidence": "medium"}]}
