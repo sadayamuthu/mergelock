@@ -1,0 +1,19 @@
+a deletes a whole module; b starts importing from it.
+-- base/src/legacy.ts --
+export function legacyFormat(s: string): string {
+  return s.toUpperCase();
+}
+-- base/src/report.ts --
+export function title(): string {
+  return "Report";
+}
+-- a.deleted --
+src/legacy.ts
+-- b/src/report.ts --
+import { legacyFormat } from "./legacy";
+
+export function title(): string {
+  return legacyFormat("Report");
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "modify_delete", "kind": "deleted_symbol_referenced", "symbol": "legacyFormat", "min_confidence": "high"}]}

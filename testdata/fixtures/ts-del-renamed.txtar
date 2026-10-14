@@ -1,0 +1,25 @@
+a renames formatDate to formatDay (same body); b adds a caller of the old name.
+-- base/src/utils.ts --
+export function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+-- base/src/report.ts --
+export function title(): string {
+  return "Report";
+}
+-- a/src/utils.ts --
+export function formatDay(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+-- b/src/report.ts --
+import { formatDate } from "./utils";
+
+export function title(): string {
+  return "Report";
+}
+
+export function stamp(d: Date): string {
+  return formatDate(d);
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "modify_delete", "kind": "deleted_symbol_referenced", "symbol": "formatDate", "renamed_to": "formatDay", "min_confidence": "high"}]}

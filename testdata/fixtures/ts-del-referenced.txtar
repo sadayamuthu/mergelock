@@ -1,0 +1,29 @@
+a deletes formatDate; b adds a new caller in another file.
+-- base/src/utils.ts --
+export function formatDate(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+export function pad(n: number): string {
+  return n < 10 ? "0" + n : String(n);
+}
+-- base/src/report.ts --
+export function title(): string {
+  return "Report";
+}
+-- a/src/utils.ts --
+export function pad(n: number): string {
+  return n < 10 ? "0" + n : String(n);
+}
+-- b/src/report.ts --
+import { formatDate } from "./utils";
+
+export function title(): string {
+  return "Report";
+}
+
+export function stamp(d: Date): string {
+  return formatDate(d);
+}
+-- expected.json --
+{"result": "conflict", "findings": [{"class": "modify_delete", "kind": "deleted_symbol_referenced", "symbol": "formatDate", "min_confidence": "high"}]}

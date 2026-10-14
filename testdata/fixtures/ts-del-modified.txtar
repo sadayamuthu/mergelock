@@ -1,0 +1,32 @@
+a deletes a method that b edits: git sees a textual conflict, mergelock names the symbol.
+-- base/src/auth.ts --
+export class AuthService {
+  login(name: string): string {
+    return name;
+  }
+
+  refresh(token: string): string {
+    return token;
+  }
+}
+-- a/src/auth.ts --
+export class AuthService {
+  login(name: string): string {
+    return name;
+  }
+}
+-- b/src/auth.ts --
+export class AuthService {
+  login(name: string): string {
+    return name;
+  }
+
+  refresh(token: string): string {
+    return token.trim();
+  }
+}
+-- expected.json --
+{"result": "conflict", "findings": [
+  {"class": "textual", "min_confidence": "certain"},
+  {"class": "modify_delete", "kind": "deleted_symbol_modified", "symbol": "AuthService.refresh", "min_confidence": "certain"}
+]}
