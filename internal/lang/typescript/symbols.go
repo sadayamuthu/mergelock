@@ -251,13 +251,6 @@ func (x *extractor) params(list *sitter.Node) ([]model.Param, []string) {
 	return ps, types
 }
 
-// importStatement and reExport are implemented in Task 9.
-func (x *extractor) importStatement(n *sitter.Node)       {}
-func (x *extractor) reExport(n *sitter.Node, spec string) {}
-
-// walk collects references; implemented in Task 9.
-func (x *extractor) walk(n *sitter.Node, enc, class string, hints map[string]string, top bool) {}
-
 func (x *extractor) applyLocalExports() {
 	for i := range x.facts.Symbols {
 		s := &x.facts.Symbols[i]
