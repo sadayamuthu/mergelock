@@ -1,0 +1,21 @@
+a adds instant in two modules and b adds it in two others: one finding for the symbol, listing all four places, not one per pair of files.
+-- base/src/index.ts --
+export const version = "1";
+-- a/src/iso.ts --
+export function instant(s: string): string {
+  return s;
+}
+-- a/src/regexes.ts --
+export function instant(): RegExp {
+  return /T/;
+}
+-- b/src/classic/schemas.ts --
+export function instant(value: string): boolean {
+  return value.length > 0;
+}
+-- b/src/mini/schemas.ts --
+export function instant(value: string): boolean {
+  return value !== "";
+}
+-- expected.json --
+{"result": "warnings", "findings": [{"class": "duplicate_definition", "kind": "same_name", "symbol": "instant", "min_confidence": "medium"}]}

@@ -1,0 +1,13 @@
+both branches add a test file with a same-named helper. Test, example and fixture code reuses conventional names, so it is not duplicate work.
+-- base/src/index.ts --
+export const version = "1";
+-- a/test/login.test.ts --
+export function makeClient(): string {
+  return "client-a";
+}
+-- b/tests/signup.spec.ts --
+export function makeClient(): string {
+  return "client-b";
+}
+-- expected.json --
+{"result": "clean", "findings": []}

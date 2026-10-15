@@ -336,5 +336,12 @@ v0.1 deliberately reports only what it can resolve. Known gaps:
 - Chained receivers (`svc.repo.save()`) are not reported.
 - In Python, a receiver assigned from a factory call
   (`repo = get_repo(); repo.save()`) is not followed.
-- `duplicate_definition` compares top-level functions, not methods.
+- `duplicate_definition` compares top-level functions, not methods, and
+  ignores tests, fixtures, examples and docs (`test/`, `__tests__/`,
+  `*.spec.ts`, `test_*.py`, `examples/`, `docs/` and similar), where the same
+  conventional names recur by design. Each duplicated name is one finding
+  listing every place it was added.
+- A symbol-level delete-vs-edit (`deleted_symbol_modified`) is reported only
+  when git also conflicts on that file. If git merges the file cleanly, the
+  edit survived (for example the function was inlined), so it isn't reported.
 - Semantic rules cover TypeScript, JavaScript and Python only.
