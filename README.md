@@ -8,21 +8,11 @@ function whose signature changed on one branch while the other branch
 added calls to the old signature, a symbol deleted on one side but still
 used on the other, the same function written twice.
 
+![Two agent branches merge cleanly in git; mergelock reports that checkout.ts still calls login() with the old signature](demo/demo.gif)
+
 It never touches your working tree. Everything is computed from commits
 with `git merge-tree` and tree-sitter parsers, so it is safe to run in a
 pre-push hook, in CI, or from an AI coding agent over MCP.
-
-```
-$ mergelock check feat-a feat-b --format text
-conflict: feat-a ↔ feat-b (base 4668b2e)
-
-error    high     signature_caller  login
-  changed in feat-a at src/auth.ts:1
-  login(user: string): boolean → login(user: string, password: string): boolean
-  call sites in feat-b:
-    src/app.ts:4  login("admin")
-  → Update 1 call site in feat-b to the new signature, or merge feat-b first and rebase feat-a.
-```
 
 ## What it detects
 
