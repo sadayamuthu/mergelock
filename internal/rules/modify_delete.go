@@ -21,6 +21,7 @@ func (ModifyDelete) Run(rc *engine.RuleContext) []verdict.Finding {
 		return out
 	}
 	gitFiles := fileConflictPaths(rc) // already reported by merge-tree
+	contentConflicts := contentConflictPaths(rc)
 	for _, key := range sortedKeys(this.Removed) {
 		s := this.Removed[key]
 		renamedTo := ""
@@ -33,7 +34,10 @@ func (ModifyDelete) Run(rc *engine.RuleContext) []verdict.Finding {
 		if !modified {
 			ch, modified = other.BodyChanged[key]
 		}
-		if modified && !gitFiles[s.File] {
+		// A real delete-vs-edit in one file always makes git conflict on it.
+		// When git merges the file cleanly, the edit survived (for example the
+		// function was inlined or restructured), so there is nothing to report.
+		if modified && contentConflicts[s.File] && !gitFiles[s.File] {
 			out = append(out, verdict.Finding{
 				Class: "modify_delete", Kind: "deleted_symbol_modified",
 				Severity: verdict.SeverityError, Confidence: verdict.ConfidenceCertain,
@@ -82,6 +86,18 @@ func fileConflictPaths(rc *engine.RuleContext) map[string]bool {
 				out[p] = true
 			}
 		}
+	}
+	return out
+}
+
+// contentConflictPaths lists every path git could not merge cleanly.
+func contentConflictPaths(rc *engine.RuleContext) map[string]bool {
+	out := map[string]bool{}
+	if rc.MergeTree == nil {
+		return out
+	}
+	for _, p := range rc.MergeTree.ConflictedPaths {
+		out[p] = true
 	}
 	return out
 }

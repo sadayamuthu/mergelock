@@ -1,0 +1,47 @@
+a inlines buildMethods into an object literal; b edits a line in its body. git merges cleanly and b's edit lands in the inlined code, so this is not a delete-vs-edit conflict.
+-- base/src/methods.ts --
+export const methods = buildMethods();
+
+function buildMethods() {
+  return {
+    first(x: number): number {
+      return x + 1;
+    },
+    second(x: number): number {
+      return x * 2;
+    },
+    third(x: number): number {
+      return x - 3;
+    },
+  };
+}
+-- a/src/methods.ts --
+export const methods = {
+    first(x: number): number {
+      return x + 1;
+    },
+    second(x: number): number {
+      return x * 2;
+    },
+    third(x: number): number {
+      return x - 3;
+    },
+  };
+-- b/src/methods.ts --
+export const methods = buildMethods();
+
+function buildMethods() {
+  return {
+    first(x: number): number {
+      return x + 1;
+    },
+    second(x: number): number {
+      return x * 3;
+    },
+    third(x: number): number {
+      return x - 3;
+    },
+  };
+}
+-- expected.json --
+{"result": "clean", "findings": []}
