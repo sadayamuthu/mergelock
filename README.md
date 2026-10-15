@@ -52,6 +52,13 @@ tar -xzf mergelock_*_$(uname -s | tr A-Z a-z)_*.tar.gz
 sudo mv mergelock /usr/local/bin/
 ```
 
+On macOS, a binary from an archive downloaded in a browser is blocked by
+Gatekeeper because it isn't signed yet. Clear the quarantine flag once:
+
+```sh
+xattr -d com.apple.quarantine /usr/local/bin/mergelock
+```
+
 **With Go** (needs Go 1.25 or newer and a C compiler, since cgo is used for
 tree-sitter; on macOS install the Xcode command-line tools, on
 Debian/Ubuntu `build-essential`):
