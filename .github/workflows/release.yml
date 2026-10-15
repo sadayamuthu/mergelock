@@ -1,0 +1,112 @@
+name: Release
+
+# Push a tag like v0.1.0 to publish a GitHub Release with prebuilt binaries.
+# Run it manually (Actions → Release → Run workflow) to build every binary
+# without publishing anything.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - run: go vet ./...
+      - run: go test -short ./...
+
+  build:
+    needs: test
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+          # tree-sitter needs cgo, so each target gets a C compiler for its
+          # platform. Linux builds are static so they run on any distro.
+          - { goos: linux,  goarch: amd64, runner: ubuntu-latest, cc: gcc,                     static: true }
+          - { goos: linux,  goarch: arm64, runner: ubuntu-latest, cc: aarch64-linux-gnu-gcc,   static: true }
+          - { goos: darwin, goarch: arm64, runner: macos-latest,  cc: clang }
+          - { goos: darwin, goarch: amd64, runner: macos-latest,  cc: clang -arch x86_64 }
+    runs-on: ${{ matrix.runner }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+      - name: Install cross compiler
+        if: matrix.cc == 'aarch64-linux-gnu-gcc'
+        run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
+      - name: Version
+        id: version
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=dev-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Build
+        env:
+          CGO_ENABLED: '1'
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+          CC: ${{ matrix.cc }}
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          ldflags="-s -w -X main.version=${VERSION}"
+          tags=""
+          if [ "${{ matrix.static }}" = "true" ]; then
+            ldflags="${ldflags} -linkmode external -extldflags -static"
+            tags="-tags netgo,osusergo"
+          fi
+          go build -trimpath $tags -ldflags "$ldflags" -o dist/mergelock ./cmd/mergelock
+          file dist/mergelock
+      - name: Smoke test
+        if: matrix.goarch == 'amd64' && matrix.goos == 'linux' || matrix.goarch == 'arm64' && matrix.goos == 'darwin'
+        run: ./dist/mergelock version
+      - name: Package
+        id: package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          name="mergelock_${VERSION}_${{ matrix.goos }}_${{ matrix.goarch }}"
+          cp LICENSE README.md USAGE.md dist/
+          tar -czf "${name}.tar.gz" -C dist mergelock LICENSE README.md USAGE.md
+          echo "name=${name}" >> "$GITHUB_OUTPUT"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ steps.package.outputs.name }}
+          path: ${{ steps.package.outputs.name }}.tar.gz
+          if-no-files-found: error
+
+  release:
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Checksums
+        run: |
+          cd dist
+          sha256sum *.tar.gz > checksums.txt
+          cat checksums.txt
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          prerelease=""
+          [[ "$TAG" == *-* ]] && prerelease="--prerelease"
+          gh release create "$TAG" dist/*.tar.gz dist/checksums.txt \
+            --repo "$GITHUB_REPOSITORY" --title "$TAG" --generate-notes $prerelease

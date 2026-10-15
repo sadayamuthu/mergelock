@@ -40,11 +40,21 @@ modify/delete checks.
 
 ## Install
 
-Requirements:
+mergelock needs **git 2.38 or newer** (for `git merge-tree --write-tree`).
 
-- **git 2.38 or newer** (for `git merge-tree --write-tree`)
-- **Go 1.25 or newer** and a **C compiler** (cgo is used for tree-sitter;
-  on macOS install the Xcode command-line tools, on Debian/Ubuntu `build-essential`)
+**Prebuilt binary** (macOS and Linux, amd64 and arm64): download the archive
+for your platform from the
+[latest release](https://github.com/sadayamuthu/mergelock/releases/latest),
+then put `mergelock` on your `PATH`:
+
+```sh
+tar -xzf mergelock_*_$(uname -s | tr A-Z a-z)_*.tar.gz
+sudo mv mergelock /usr/local/bin/
+```
+
+**With Go** (needs Go 1.25 or newer and a C compiler, since cgo is used for
+tree-sitter; on macOS install the Xcode command-line tools, on
+Debian/Ubuntu `build-essential`):
 
 ```sh
 go install github.com/sadayamuthu/mergelock/cmd/mergelock@latest
@@ -103,3 +113,7 @@ gofmt -l .
 
 Rule behaviour is pinned by branch-pair fixtures in `testdata/fixtures/*.txtar`;
 each one is a tiny repo with a base, two branches and the expected findings.
+
+## License
+
+[Apache License 2.0](LICENSE)
