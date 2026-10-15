@@ -6,6 +6,7 @@
 - [In CI](#in-ci)
 - [As a git hook](#as-a-git-hook)
 - [With AI agents (MCP)](#with-ai-agents-mcp)
+- [Realtime with parallel agents](#realtime-with-parallel-agents)
 - [Cache](#cache)
 - [Limits](#limits)
 
@@ -197,7 +198,7 @@ The server works on the repository it is started in.
 claude mcp add mergelock -- mergelock serve
 ```
 
-**Any MCP client** (JSON config):
+**Cursor** (`.cursor/mcp.json`) or any client that uses the `mcpServers` format:
 
 ```json
 {
@@ -210,9 +211,111 @@ claude mcp add mergelock -- mergelock serve
 }
 ```
 
-A good instruction to give the agent: *"Before you open a PR or merge,
-call the mergelock `check` tool and fix every finding with severity
-`error`."*
+**Codex** (`~/.codex/config.toml`):
+
+```toml
+[mcp_servers.mergelock]
+command = "mergelock"
+args = ["serve"]
+```
+
+Then add this to the agent's standing instructions (`CLAUDE.md`,
+`.cursor/rules`, `AGENTS.md`):
+
+> After each commit, and before saying you're done, call the mergelock
+> `check` tool. Fix every finding with severity `error`, commit, and check
+> again.
+
+## Realtime with parallel agents
+
+mergelock compares **commits**, not uncommitted files. To get continuous
+feedback while agents work, give each agent its own branch or worktree,
+have it commit often, and run the check at the moments it makes progress.
+
+| Recipe | Catches | When |
+|--------|---------|------|
+| [MCP + instructions](#with-ai-agents-mcp) | agent's branch vs `main` | while the agent works |
+| [Claude Code Stop hook](#claude-code-block-finishing-on-a-conflict) | agent's branch vs `main` | before Claude can finish (enforced) |
+| [post-commit hook](#every-commit-check-against-other-agents) | agent vs agent | on every commit |
+| [Watch script](#watch-all-branches) | every pair of branches | continuously, for you |
+| [CI job](#in-ci) | pull request vs base | final gate |
+
+### Claude Code: block finishing on a conflict
+
+A `Stop` hook runs whenever Claude tries to finish. Exit code 2 keeps
+Claude working and shows it what the hook printed to stderr. In
+`.claude/settings.json`:
+
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mergelock check HEAD main --format text >&2; [ $? -eq 2 ] && exit 2 || exit 0"
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+Claude then sees findings like *"Update 1 call site in HEAD to the new
+signature"* and fixes them before stopping. Warnings don't block.
+
+### Every commit: check against other agents
+
+Name agent branches `agent/*` and save this as `.git/hooks/post-commit`
+(`chmod +x`). Worktrees share the repository's hooks, so every agent's
+commits run it:
+
+```bash
+#!/bin/bash
+me=$(git branch --show-current)
+for other in $(git for-each-ref --format='%(refname:short)' refs/heads/agent/); do
+  [ "$other" = "$me" ] && continue
+  out=$(mergelock check "$me" "$other" --format text)
+  [ $? -ge 1 ] && printf '⚠ mergelock: %s vs %s\n%s\n' "$me" "$other" "$out" >&2
+done
+exit 0
+```
+
+The commit always succeeds. The warning appears in the agent's command
+output, which agents normally read and act on.
+
+### Watch all branches
+
+Run in a spare terminal while agents work:
+
+```bash
+#!/bin/bash
+# mergelock-watch.sh: recheck every agent branch every 10 seconds
+while true; do
+  clear; date
+  branches=$(git for-each-ref --format='%(refname:short)' refs/heads/agent/)
+  for a in $branches; do
+    mergelock check "$a" main --format text | head -1
+    for b in $branches; do
+      [[ "$a" < "$b" ]] && mergelock check "$a" "$b" --format text | head -1
+    done
+  done
+  sleep 10
+done
+```
+
+Output:
+
+```
+clean: agent/a ↔ main (base 4668b2e)
+conflict: agent/a ↔ agent/b (base 4668b2e)
+clean: agent/b ↔ main (base 4668b2e)
+```
+
+Run `mergelock check agent/a agent/b --format text` for the details of a
+conflicting pair.
 
 ## Cache
 
