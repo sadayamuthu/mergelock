@@ -1,0 +1,37 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.sadayamuthu/mergelock",
+  "title": "mergelock",
+  "description": "Finds merge conflicts git can't see between branches: changed signatures vs new callers.",
+  "version": "0.1.2",
+  "repository": {
+    "url": "https://github.com/sadayamuthu/mergelock",
+    "source": "github"
+  },
+  "websiteUrl": "https://github.com/sadayamuthu/mergelock",
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "ghcr.io/sadayamuthu/mergelock:0.1.2",
+      "transport": {
+        "type": "stdio"
+      },
+      "runtimeArguments": [
+        {
+          "type": "named",
+          "name": "-v",
+          "value": "{repo_path}:/repo",
+          "description": "Mount the git repository to check at /repo",
+          "isRequired": true,
+          "variables": {
+            "repo_path": {
+              "description": "Absolute path to your git repository",
+              "isRequired": true,
+              "format": "filepath"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

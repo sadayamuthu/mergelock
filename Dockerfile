@@ -11,6 +11,8 @@ ARG VERSION=dev
 RUN CGO_ENABLED=1 go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" -o /mergelock ./cmd/mergelock
 
 FROM debian:bookworm-slim
+# Lets the MCP Registry verify that this image belongs to server.json's server.
+LABEL io.modelcontextprotocol.server.name="io.github.sadayamuthu/mergelock"
 RUN apt-get update \
  && apt-get install -y --no-install-recommends git ca-certificates \
  && rm -rf /var/lib/apt/lists/* \

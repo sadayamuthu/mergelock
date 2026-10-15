@@ -57,6 +57,13 @@ Debian/Ubuntu `build-essential`):
 go install github.com/sadayamuthu/mergelock/cmd/mergelock@latest
 ```
 
+**With Docker** (linux/amd64 and linux/arm64; mount the repository at `/repo`):
+
+```sh
+docker run --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock check my-branch main --format text
+docker run -i --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock   # MCP server on stdio
+```
+
 Or build from source:
 
 ```sh
