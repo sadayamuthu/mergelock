@@ -110,17 +110,18 @@ func joinLocations(ls []verdict.Location) string {
 	return strings.Join(parts, ", ")
 }
 
-// nonProductionDirs hold tests, fixtures, examples and docs, where the same
-// conventional names (main, GET, get_client, test helpers) recur by design.
+// nonProductionDirs hold tests, fixtures, examples, docs, generated output and
+// vendored dependencies, where conventional names recur by design.
 var nonProductionDirs = map[string]bool{
 	"test": true, "tests": true, "__tests__": true, "spec": true, "specs": true, "e2e": true,
 	"fixture": true, "fixtures": true, "__fixtures__": true, "__mocks__": true, "mocks": true, "testdata": true,
 	"example": true, "examples": true, "sample": true, "samples": true, "demo": true, "demos": true,
 	"doc": true, "docs": true, "docs_src": true, "playground": true, "playgrounds": true,
 	"bench": true, "benchmark": true, "benchmarks": true,
+	"vendor": true, "node_modules": true, "dist": true, "build": true, "generated": true, "__generated__": true,
 }
 
-var nonProductionFile = regexp.MustCompile(`^(test_.*\.py|.*_test\.py|conftest\.py|.*\.(test|spec|bench|stories)\.[cm]?[jt]sx?)$`)
+var nonProductionFile = regexp.MustCompile(`^(test_.*\.py|.*_test\.py|conftest\.py|.*\.(test|spec|bench|stories)\.[cm]?[jt]sx?|.*\.d\.ts|.*\.(generated|gen)\.ts|.*_pb2(_grpc)?\.py|.*\.min\.js)$`)
 
 func isNonProductionPath(p string) bool {
 	parts := strings.Split(p, "/")
