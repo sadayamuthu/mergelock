@@ -3,7 +3,7 @@
   "name": "io.github.sadayamuthu/mergelock",
   "title": "mergelock",
   "description": "Finds merge conflicts git can't see between branches: changed signatures vs new callers.",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "repository": {
     "url": "https://github.com/sadayamuthu/mergelock",
     "source": "github"
@@ -12,7 +12,7 @@
   "packages": [
     {
       "registryType": "oci",
-      "identifier": "ghcr.io/sadayamuthu/mergelock:0.1.4",
+      "identifier": "ghcr.io/sadayamuthu/mergelock:0.1.5",
       "transport": {
         "type": "stdio"
       },

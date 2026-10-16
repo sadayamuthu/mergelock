@@ -49,7 +49,7 @@ brew install sadayamuthu/tap/mergelock
 2.38+, such as Debian 12 or Ubuntu 24.04):
 
 ```sh
-VERSION=0.1.4   # latest release, without the v
+VERSION=0.1.5   # latest release, without the v
 curl -fLO "https://github.com/sadayamuthu/mergelock/releases/download/v${VERSION}/mergelock_${VERSION}_$(dpkg --print-architecture).deb"
 sudo apt install "./mergelock_${VERSION}_$(dpkg --print-architecture).deb"
 ```
@@ -57,7 +57,7 @@ sudo apt install "./mergelock_${VERSION}_$(dpkg --print-architecture).deb"
 **Fedora / RHEL** (`.rpm`, x86_64 and aarch64):
 
 ```sh
-VERSION=0.1.4
+VERSION=0.1.5
 sudo dnf install "https://github.com/sadayamuthu/mergelock/releases/download/v${VERSION}/mergelock-${VERSION}-1.$(uname -m).rpm"
 ```
 
