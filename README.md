@@ -1,6 +1,13 @@
 # mergelock
 
 [![CI](https://github.com/sadayamuthu/mergelock/actions/workflows/ci.yml/badge.svg)](https://github.com/sadayamuthu/mergelock/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/sadayamuthu/mergelock?sort=semver)](https://github.com/sadayamuthu/mergelock/releases/latest)
+[![Homebrew](https://img.shields.io/badge/brew-sadayamuthu%2Ftap%2Fmergelock-FBB040?logo=homebrew&logoColor=white)](https://github.com/sadayamuthu/homebrew-tap)
+[![Docker](https://img.shields.io/badge/docker-ghcr.io%2Fsadayamuthu%2Fmergelock-2496ED?logo=docker&logoColor=white)](https://github.com/sadayamuthu/mergelock/pkgs/container/mergelock)
+[![deb/rpm](https://img.shields.io/badge/packages-.deb%20%7C%20.rpm-A81D33?logo=debian&logoColor=white)](https://github.com/sadayamuthu/mergelock/releases/latest)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.sadayamuthu%2Fmergelock-6E56CF)](https://registry.modelcontextprotocol.io/v0/servers?search=io.github.sadayamuthu/mergelock)
+[![Glama](https://glama.ai/mcp/servers/sadayamuthu/mergelock/badges/score.svg)](https://glama.ai/mcp/servers/sadayamuthu/mergelock)
+[![License](https://img.shields.io/github/license/sadayamuthu/mergelock)](LICENSE)
 
 A git-native merge gate. `mergelock check` compares two branches before
 they meet and reports the conflicts git itself won't tell you about: a
@@ -32,6 +39,35 @@ modify/delete checks.
 
 mergelock needs **git 2.38 or newer** (for `git merge-tree --write-tree`).
 
+**Homebrew** (macOS and Linux):
+
+```sh
+brew install sadayamuthu/tap/mergelock
+```
+
+**Debian / Ubuntu** (`.deb`, amd64 and arm64; needs a distribution with git
+2.38+, such as Debian 12 or Ubuntu 24.04):
+
+```sh
+VERSION=0.1.4   # latest release, without the v
+curl -fLO "https://github.com/sadayamuthu/mergelock/releases/download/v${VERSION}/mergelock_${VERSION}_$(dpkg --print-architecture).deb"
+sudo apt install "./mergelock_${VERSION}_$(dpkg --print-architecture).deb"
+```
+
+**Fedora / RHEL** (`.rpm`, x86_64 and aarch64):
+
+```sh
+VERSION=0.1.4
+sudo dnf install "https://github.com/sadayamuthu/mergelock/releases/download/v${VERSION}/mergelock-${VERSION}-1.$(uname -m).rpm"
+```
+
+**Docker** (linux/amd64 and linux/arm64; mount the repository at `/repo`):
+
+```sh
+docker run --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock check my-branch main --format text
+docker run -i --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock   # MCP server on stdio
+```
+
 **Prebuilt binary** (macOS and Linux, amd64 and arm64): download the archive
 for your platform from the
 [latest release](https://github.com/sadayamuthu/mergelock/releases/latest),
@@ -43,7 +79,8 @@ sudo mv mergelock /usr/local/bin/
 ```
 
 On macOS, a binary from an archive downloaded in a browser is blocked by
-Gatekeeper because it isn't signed yet. Clear the quarantine flag once:
+Gatekeeper because it isn't signed yet (Homebrew installs aren't affected).
+Clear the quarantine flag once:
 
 ```sh
 xattr -d com.apple.quarantine /usr/local/bin/mergelock
@@ -55,13 +92,6 @@ Debian/Ubuntu `build-essential`):
 
 ```sh
 go install github.com/sadayamuthu/mergelock/cmd/mergelock@latest
-```
-
-**With Docker** (linux/amd64 and linux/arm64; mount the repository at `/repo`):
-
-```sh
-docker run --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock check my-branch main --format text
-docker run -i --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock   # MCP server on stdio
 ```
 
 Or build from source:
