@@ -58,13 +58,31 @@ func New(d Deps) *mcp.Server {
 		d.Now = time.Now
 	}
 	s := mcp.NewServer(&mcp.Implementation{Name: "mergelock", Version: d.Version}, nil)
+	// Both tools only read the repository: no branch, index or working-tree
+	// change, and nothing outside it. check writes only its own parse cache.
+	readOnly := func(title string) *mcp.ToolAnnotations {
+		return &mcp.ToolAnnotations{Title: title, ReadOnlyHint: true, IdempotentHint: true, OpenWorldHint: new(bool)}
+	}
 	mcp.AddTool(s, &mcp.Tool{
-		Name:        "check",
-		Description: "Check a branch against another for textual and semantic merge conflicts. Returns a mergelock verdict (schema v1) with findings an agent can act on.",
+		Name:  "check",
+		Title: "Check branches for merge conflicts",
+		Description: "Simulate merging two committed branches and report textual and semantic conflicts, " +
+			"including ones git merges cleanly: a changed function signature against new call sites, " +
+			"a deleted symbol that is still used, duplicate definitions. Returns a verdict with result " +
+			"clean, warnings or conflict, and per finding the file, line and a suggested_action to apply. " +
+			"Call it after committing and before reporting work as done; fix every error finding, commit, " +
+			"and call it again. Uncommitted changes are not seen. Use claims instead to see what other " +
+			"agents are working on before you start.",
+		Annotations: readOnly("Check branches for merge conflicts"),
 	}, d.check)
 	mcp.AddTool(s, &mcp.Tool{
-		Name:        "claims",
-		Description: "List live claims (declared work scopes) from refs/mergelock/claims, newest first, so you can pick an area no other agent is working in. Read-only in v0.1.",
+		Name:  "claims",
+		Title: "List live work claims",
+		Description: "List live claims (work scopes other agents have declared: branch, paths, symbols, intent) " +
+			"from refs/mergelock/claims, newest first; expired claims are left out. Call it before starting " +
+			"a task to pick files and symbols no other agent is changing. It reports intent only; to find " +
+			"actual conflicts between branches, use check. Read-only in v0.1: claims cannot be created here.",
+		Annotations: readOnly("List live work claims"),
 	}, d.claims)
 	return s
 }

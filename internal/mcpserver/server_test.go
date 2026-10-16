@@ -71,6 +71,13 @@ func TestTools(t *testing.T) {
 	names := map[string]bool{}
 	for _, tool := range tools.Tools {
 		names[tool.Name] = true
+		a := tool.Annotations
+		if a == nil || !a.ReadOnlyHint || !a.IdempotentHint || a.OpenWorldHint == nil || *a.OpenWorldHint || a.Title == "" {
+			t.Errorf("%s annotations = %+v, want read-only, idempotent, closed-world, titled", tool.Name, a)
+		}
+		if tool.Title == "" || tool.Description == "" {
+			t.Errorf("%s: missing title or description", tool.Name)
+		}
 	}
 	if !names["check"] || !names["claims"] || len(names) != 2 {
 		t.Fatalf("tools = %v", names)
