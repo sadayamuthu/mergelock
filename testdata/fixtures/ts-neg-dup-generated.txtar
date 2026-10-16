@@ -1,0 +1,13 @@
+Both branches add a duplicate helper in generated code that the rule should ignore.
+-- base/src/index.ts --
+export const version = "1";
+-- a/src/generated/client.ts --
+export function parseUser(input: string): User {
+  return JSON.parse(input) as User;
+}
+-- b/src/__generated__/schema.ts --
+export function parseUser(raw: string): User {
+  return JSON.parse(raw) as User;
+}
+-- expected.json --
+{"result": "clean", "findings": []}

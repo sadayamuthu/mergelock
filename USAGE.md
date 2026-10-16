@@ -339,8 +339,11 @@ v0.1 deliberately reports only what it can resolve. Known gaps:
 - `duplicate_definition` compares top-level functions, not methods, and
   ignores tests, fixtures, examples and docs (`test/`, `__tests__/`,
   `*.spec.ts`, `test_*.py`, `examples/`, `docs/` and similar), where the same
-  conventional names recur by design. Each duplicated name is one finding
-  listing every place it was added.
+  conventional names recur by design. It also skips generated and vendored
+  code in directories such as `vendor/`, `node_modules/`, `dist/`, `build/`,
+  `generated/` and `__generated__/`, and files such as `*.d.ts`,
+  `*.generated.ts`, `*.gen.ts`, `*_pb2.py`, `*_pb2_grpc.py` and `*.min.js`.
+  Each duplicated name is one finding listing every place it was added.
 - A symbol-level delete-vs-edit (`deleted_symbol_modified`) is reported only
   when git also conflicts on that file. If git merges the file cleanly, the
   edit survived (for example the function was inlined), so it isn't reported.
