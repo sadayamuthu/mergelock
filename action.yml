@@ -118,8 +118,8 @@ runs:
         fi
 
         json="$RUNNER_TEMP/mergelock-verdict.json"
-        mergelock check "$head" "$ref" --format json > "$json"
-        code=$?
+        code=0
+        mergelock check "$head" "$ref" --format json > "$json" || code=$?
         case $code in
           0) result=clean ;;
           1) result=warnings ;;
@@ -130,7 +130,7 @@ runs:
         echo "json=$json" >> "$GITHUB_OUTPUT"
 
         # The second run is fast: parses are cached by blob id.
-        text=$(mergelock check "$head" "$ref" --format text)
+        text=$(mergelock check "$head" "$ref" --format text) || true
         echo "$text"
         {
           echo "### mergelock: $result"
