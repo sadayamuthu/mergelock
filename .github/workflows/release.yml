@@ -2,12 +2,13 @@ name: Release
 
 # Push a tag like v0.1.0 to publish a GitHub Release with prebuilt binaries
 # and .deb/.rpm packages, a Docker image on GHCR, an MCP Registry entry and
-# the Homebrew formula in sadayamuthu/homebrew-tap.
+# the Homebrew formula in sadayamuthu/homebrew-tap, and moves the major tag
+# (v0) that `uses: sadayamuthu/mergelock@v0` resolves to.
 # Run it manually (Actions → Release → Run workflow) to build every binary
 # without publishing anything.
 on:
   push:
-    tags: ['v*']
+    tags: ['v*.*.*']   # not v0: that tag only tracks the latest release
   workflow_dispatch:
 
 permissions:
@@ -228,3 +229,22 @@ jobs:
           git -c user.name=ksadayamuthu -c user.email=ksadayamuthu@outlook.com \
             commit -am "mergelock ${TAG#v}"
           git push
+
+  # Points the major tag (v0 for v0.x.y) at this release, so workflows using
+  # `sadayamuthu/mergelock@v0` pick up action.yml changes. Skipped for
+  # prereleases.
+  action-tag:
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v') && !contains(github.ref_name, '-')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Move major tag
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          major="${TAG%%.*}"
+          git tag -f "$major" "$GITHUB_SHA"
+          git push -f origin "refs/tags/$major"
