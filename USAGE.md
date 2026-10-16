@@ -134,7 +134,7 @@ On an operational error, JSON mode prints `{"error": "..."}` and exits 3.
 
 ## In CI
 
-Fail a pull request that would conflict with its base branch:
+Check every pull request against its base branch with the GitHub Action:
 
 ```yaml
 # .github/workflows/mergelock.yml
@@ -148,12 +148,46 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0          # mergelock needs the merge base
+      - uses: sadayamuthu/mergelock@v0
+```
+
+It downloads the release binary (checksum-verified), checks the PR's head
+commit against `origin/<base>`, writes the result to the job summary and
+adds an annotation on each finding. Linux and macOS runners, x64 and arm64.
+
+| Input | Default | |
+|-------|---------|---|
+| `against` | the PR's base branch, else the default branch | Branch to check against |
+| `head` | the PR's head commit, else `github.sha` | Commit or branch to check |
+| `fail-on` | `conflict` | `conflict`, `warnings` or `never` |
+| `version` | `latest` | Release to use, such as `0.1.4` |
+| `working-directory` | `.` | Repository to check |
+
+Outputs: `result` (`clean`, `warnings` or `conflict`), `json` (path to the
+full verdict) and `version`. For example, to post your own comment:
+
+```yaml
+      - uses: sadayamuthu/mergelock@v0
+        id: mergelock
+        with:
+          fail-on: never
+      - if: steps.mergelock.outputs.result != 'clean'
+        run: jq '.findings' "${{ steps.mergelock.outputs.json }}"
+```
+
+`@v0` follows the latest v0.x release of the action, and `version: latest`
+downloads the newest binary. For fully reproducible runs, pin both:
+`uses: sadayamuthu/mergelock@v0.1.5` with `version: 0.1.5`.
+
+**Without the action** (other CI systems, or to build from source):
+
+```yaml
       - uses: actions/setup-go@v5
         with:
           go-version: '1.25'
       - run: go install github.com/sadayamuthu/mergelock/cmd/mergelock@latest
       - name: Check against base branch
-        run: mergelock check "$HEAD" "origin/$BASE" --format text
+        run: mergelock check "$HEAD" "origin/$BASE" --format text || [ $? -eq 1 ]
         env:
           HEAD: ${{ github.event.pull_request.head.sha }}
           BASE: ${{ github.base_ref }}
@@ -161,13 +195,8 @@ jobs:
 
 Use the PR's head commit, not `HEAD`: on `pull_request` events the
 checkout is a temporary merge commit that already contains the base branch.
-
-The job fails on exit 1 (warnings) as well as 2 (conflict). To fail on
-conflicts only, replace the `run` line with:
-
-```sh
-mergelock check "$HEAD" "origin/$BASE" --format text || [ $? -eq 1 ]
-```
+`|| [ $? -eq 1 ]` lets warnings (exit 1) pass and fails on conflicts
+(exit 2) and errors (exit 3).
 
 ## As a git hook
 

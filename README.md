@@ -68,6 +68,16 @@ docker run --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock check my-branch ma
 docker run -i --rm -v "$PWD":/repo ghcr.io/sadayamuthu/mergelock   # MCP server on stdio
 ```
 
+**GitHub Actions** (checks each pull request against its base branch; see
+[In CI](USAGE.md#in-ci)):
+
+```yaml
+- uses: actions/checkout@v4
+  with:
+    fetch-depth: 0
+- uses: sadayamuthu/mergelock@v0
+```
+
 **Prebuilt binary** (macOS and Linux, amd64 and arm64): download the archive
 for your platform from the
 [latest release](https://github.com/sadayamuthu/mergelock/releases/latest),

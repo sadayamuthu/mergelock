@@ -1,0 +1,158 @@
+name: mergelock check
+description: Find merge conflicts git can't see between a pull request and its base branch.
+author: sadayamuthu
+branding:
+  icon: git-merge
+  color: purple
+
+inputs:
+  against:
+    description: Branch to check against. Defaults to the pull request's base branch, or the repository's default branch.
+    required: false
+    default: ''
+  head:
+    description: Commit or branch to check. Defaults to the pull request's head commit, or the commit that triggered the workflow.
+    required: false
+    default: ''
+  fail-on:
+    description: 'When to fail the step: conflict (exit 2), warnings (exit 1 or 2) or never.'
+    required: false
+    default: conflict
+  version:
+    description: mergelock release to use, such as 0.1.4 or v0.1.4.
+    required: false
+    default: latest
+  working-directory:
+    description: Directory of the git repository to check.
+    required: false
+    default: .
+
+outputs:
+  result:
+    description: 'The verdict: clean, warnings or conflict.'
+    value: ${{ steps.check.outputs.result }}
+  json:
+    description: Path to the full JSON verdict.
+    value: ${{ steps.check.outputs.json }}
+  version:
+    description: The mergelock release that ran.
+    value: ${{ steps.install.outputs.version }}
+
+runs:
+  using: composite
+  steps:
+    - name: Install mergelock
+      id: install
+      shell: bash
+      env:
+        VERSION: ${{ inputs.version }}
+      run: |
+        set -euo pipefail
+        case "$RUNNER_OS" in
+          Linux) os=linux ;;
+          macOS) os=darwin ;;
+          *) echo "::error::mergelock runs on Linux and macOS runners, not $RUNNER_OS"; exit 1 ;;
+        esac
+        case "$RUNNER_ARCH" in
+          X64) arch=amd64 ;;
+          ARM64) arch=arm64 ;;
+          *) echo "::error::mergelock has no build for $RUNNER_ARCH runners"; exit 1 ;;
+        esac
+        tag="$VERSION"
+        if [ "$tag" = latest ]; then
+          # The latest-release page redirects to the tag; this avoids the API rate limit.
+          url=$(curl -fsSL --retry 3 -o /dev/null -w '%{url_effective}' https://github.com/sadayamuthu/mergelock/releases/latest)
+          tag="${url##*/}"
+        fi
+        case "$tag" in v*) ;; *) tag="v$tag" ;; esac
+        dir="$RUNNER_TEMP/mergelock-$tag"
+        mkdir -p "$dir"
+        cd "$dir"
+        archive="mergelock_${tag}_${os}_${arch}.tar.gz"
+        base="https://github.com/sadayamuthu/mergelock/releases/download/$tag"
+        curl -fsSL --retry 3 -O "$base/$archive" -O "$base/checksums.txt"
+        if ! grep " ${archive}\$" checksums.txt | shasum -a 256 -c - >/dev/null; then
+          echo "::error::checksum mismatch for $archive"
+          exit 1
+        fi
+        tar -xzf "$archive" mergelock
+        echo "$dir" >> "$GITHUB_PATH"
+        echo "version=$tag" >> "$GITHUB_OUTPUT"
+        "$dir/mergelock" version
+
+    - name: Check
+      id: check
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        HEAD_INPUT: ${{ inputs.head }}
+        AGAINST_INPUT: ${{ inputs.against }}
+        FAIL_ON: ${{ inputs.fail-on }}
+        PR_HEAD: ${{ github.event.pull_request.head.sha }}
+        BASE_REF: ${{ github.base_ref }}
+        DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+      run: |
+        set -uo pipefail
+        case "$FAIL_ON" in
+          conflict | warnings | never) ;;
+          *) echo "::error::fail-on must be conflict, warnings or never, not '$FAIL_ON'"; exit 1 ;;
+        esac
+        # On pull_request events the checkout is a merge commit that already
+        # contains the base branch, so check the PR's own head commit.
+        head="${HEAD_INPUT:-${PR_HEAD:-$GITHUB_SHA}}"
+        against="${AGAINST_INPUT:-${BASE_REF:-${DEFAULT_BRANCH:-main}}}"
+
+        if [ "$(git rev-parse --is-shallow-repository)" = true ]; then
+          echo "::notice::Shallow clone; fetching full history for the merge base. Set fetch-depth: 0 on actions/checkout to skip this."
+          git fetch --quiet --no-tags --unshallow origin
+        fi
+        if git rev-parse --verify --quiet "refs/remotes/origin/$against^{commit}" >/dev/null; then
+          ref="origin/$against"
+        elif git rev-parse --verify --quiet "$against^{commit}" >/dev/null; then
+          ref="$against"
+        elif git fetch --quiet --no-tags origin "+refs/heads/$against:refs/remotes/origin/$against"; then
+          ref="origin/$against"
+        else
+          echo "::error::can't find '$against' locally or on origin"
+          exit 1
+        fi
+
+        json="$RUNNER_TEMP/mergelock-verdict.json"
+        mergelock check "$head" "$ref" --format json > "$json"
+        code=$?
+        case $code in
+          0) result=clean ;;
+          1) result=warnings ;;
+          2) result=conflict ;;
+          *) exit "$code" ;; # operational error; mergelock already printed it
+        esac
+        echo "result=$result" >> "$GITHUB_OUTPUT"
+        echo "json=$json" >> "$GITHUB_OUTPUT"
+
+        # The second run is fast: parses are cached by blob id.
+        text=$(mergelock check "$head" "$ref" --format text)
+        echo "$text"
+        {
+          echo "### mergelock: $result"
+          echo
+          echo "\`${head:0:12}\` against \`$ref\`"
+          echo
+          echo '```'
+          echo "$text"
+          echo '```'
+        } >> "$GITHUB_STEP_SUMMARY"
+
+        # One annotation per finding, placed where the fix belongs: the call
+        # site if there is one, otherwise the changed definition.
+        if command -v jq >/dev/null; then
+          jq -r 'def msg: gsub("%"; "%25") | gsub("\r"; "%0D") | gsub("\n"; "%0A");
+            def prop: msg | gsub(":"; "%3A") | gsub(","; "%2C");
+            .findings[] |
+            ((.call_sites // [])[0] // .changed_at // .modified_at // (.duplicates // [])[0] // {file: (.paths // [""])[0]}) as $at |
+            "::\(if .severity == "error" then "error" else "warning" end) file=\($at.file | prop),line=\($at.line // 1),title=\("mergelock " + .class + (if .symbol then " " + .symbol else "" end) | prop)::\(.suggested_action | msg)"' "$json"
+        fi
+
+        case "$FAIL_ON:$code" in
+          conflict:2 | warnings:1 | warnings:2) exit 1 ;;
+        esac
+        exit 0

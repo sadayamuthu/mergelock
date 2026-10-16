@@ -1,0 +1,89 @@
+name: Action
+
+# Exercises action.yml against a small repository with a known semantic
+# conflict, and against this repository's own pull requests.
+on:
+  pull_request:
+  push:
+    branches: [main]
+    paths: [action.yml, .github/workflows/action-test.yml]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scenario:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build a repo where a changes login() and b adds an old-style call
+        run: |
+          set -eu
+          r="$RUNNER_TEMP/scenario"
+          git init -q -b main "$r"
+          cd "$r"
+          git config user.name ci
+          git config user.email ci@example.com
+          mkdir src
+          printf 'export function login(user: string): boolean {\n  return user.length > 0;\n}\n' > src/auth.ts
+          git add . && git commit -qm base
+          git checkout -qb a
+          printf 'export function login(user: string, password: string): boolean {\n  return user.length > 0 && password.length > 0;\n}\n' > src/auth.ts
+          git commit -qam a
+          git checkout -q main && git checkout -qb b
+          printf 'import { login } from "./auth";\n\nexport const ok = login("admin");\n' > src/app.ts
+          git add . && git commit -qm b
+          git checkout -q main
+
+      - name: Conflict is reported
+        id: conflict
+        uses: ./
+        with:
+          working-directory: ${{ runner.temp }}/scenario
+          head: a
+          against: b
+          fail-on: never
+      - name: Expect conflict
+        run: |
+          test "${{ steps.conflict.outputs.result }}" = conflict
+          grep -q '"signature_caller"' "${{ steps.conflict.outputs.json }}"
+
+      - name: fail-on conflict fails the step
+        id: failing
+        continue-on-error: true
+        uses: ./
+        with:
+          working-directory: ${{ runner.temp }}/scenario
+          head: a
+          against: b
+      - name: Expect failure
+        run: test "${{ steps.failing.outcome }}" = failure
+
+      - name: Clean pair, pinned version
+        id: clean
+        uses: ./
+        with:
+          working-directory: ${{ runner.temp }}/scenario
+          head: a
+          against: main
+          version: 0.1.4
+          fail-on: warnings
+      - name: Expect clean
+        run: |
+          test "${{ steps.clean.outputs.result }}" = clean
+          test "${{ steps.clean.outputs.version }}" = v0.1.4
+
+  self:
+    # Default inputs on a real pull request: head commit vs. base branch.
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: ./
