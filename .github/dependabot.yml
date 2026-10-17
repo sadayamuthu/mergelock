@@ -1,0 +1,33 @@
+# Weekly update pull requests for Go modules, workflow actions and base
+# images. Each ecosystem's updates arrive grouped in one pull request.
+version: 2
+updates:
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go:
+        patterns: ['*']
+    commit-message:
+      prefix: deps
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ['*']
+    commit-message:
+      prefix: ci
+
+  - package-ecosystem: docker
+    directories: [/, /demo]
+    schedule:
+      interval: weekly
+    groups:
+      docker:
+        patterns: ['*']
+    commit-message:
+      prefix: deps

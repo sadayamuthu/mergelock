@@ -183,7 +183,8 @@ Open an issue before starting, so two people don't build the same adapter.
 
 Please don't report security problems in a public issue. Use
 [**Report a vulnerability**](https://github.com/sadayamuthu/mergelock/security/advisories/new)
-on the repository's Security tab instead.
+on the repository's Security tab instead. See [SECURITY.md](SECURITY.md) for
+what to include and what's in scope.
 
 ## License
 
