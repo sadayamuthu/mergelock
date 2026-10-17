@@ -145,6 +145,9 @@ Exit codes make it easy to script:
 See **[USAGE.md](USAGE.md)** for the full command reference, the
 `.mergelock.yml` config, the JSON output schema, CI and git-hook recipes,
 and how to connect it to an AI agent over MCP.
+To report a missed conflict or add a language, see
+**[CONTRIBUTING.md](CONTRIBUTING.md)**; for a security problem, see
+**[SECURITY.md](SECURITY.md)**.
 
 ## Development
 
