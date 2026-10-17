@@ -2,7 +2,7 @@
 #   docker build -t mergelock .
 #   docker run -i --rm -v "$PWD":/repo mergelock          # MCP server for the mounted repo
 #   docker run --rm -v "$PWD":/repo mergelock check my-branch main --format text
-FROM golang:1.25-bookworm AS build
+FROM golang:1.27-bookworm AS build
 WORKDIR /src
 COPY go.mod go.sum ./
 RUN go mod download
